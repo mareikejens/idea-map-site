@@ -232,3 +232,6 @@ input,textarea,select{font-size:max(16px,1em)}
 ::view-transition-old(portrait){display:none}
 /* No rubber-band bounce: every screen is exactly one viewport tall. */
 html{overscroll-behavior-y:none}
+/* The Back button sits in the same spot on every screen: the story, the marble page and the question before the game. */
+.world:has(.flood) .controls{padding:24px 7vw 30px}
+@media(max-width:720px){.world:has(.flood) .controls{padding:18px 7vw 24px}}
