@@ -15,8 +15,8 @@ const Play=(()=>{
 
   // ---------- sound: short glass and porcelain tones made on the fly, no audio files ----------
   const Sound=(()=>{
-    let audio=null,on=true,lastTime=0;
-    try{on=sessionStorage.getItem('idea-map-sound')!=='off'}catch{}
+    // Switched off for now: no tones, no toggle in the header. Set `on=true` to bring the sound back.
+    let audio=null,on=false,lastTime=0;
     function wake(){if(!on)return;try{audio??=new AudioContext();if(audio.state==='suspended')audio.resume()}catch{}}
     function tone(partials,level){
       if(!on||!audio||audio.state!=='running')return;
@@ -62,11 +62,15 @@ const Play=(()=>{
   }
 
   // ---------- the screen ----------
+  // The shelves hold the ideas and, as the last marble, a grey one that opens "Add your own". Three marbles per shelf at most,
+  // spread evenly (7 → 3+2+2, 4 → 2+2), so no shelf is left with a single marble.
   function shelfRows(list){
-    const perRow=list.length<=3?list.length:Math.ceil(list.length/2);
-    const rows=[];for(let k=0;k<list.length;k+=perRow)rows.push(list.slice(k,k+perRow));
-    return rows.map(row=>'<div class="rail" style="--slots:'+row.length+'">'+row.map(i=>
-      '<button class="pick" data-id="'+esc(i.id)+'">'+ball(i)+'<span class="pick-name">'+esc(i.title)+'</span></button>').join('')+'</div>').join('');
+    const items=[...list.map(i=>'<button class="pick" data-id="'+esc(i.id)+'">'+ball(i)+'<span class="pick-name">'+esc(i.title)+'</span></button>'),
+      '<button class="pick add-own"><span class="ball own" aria-hidden="true"></span><span class="pick-name">'+esc(U.ownAdd)+'</span></button>'];
+    const shelves=Math.ceil(items.length/3),base=Math.floor(items.length/shelves),extra=items.length%shelves;
+    let html='',at=0;
+    for(let k=0;k<shelves;k++){const n=base+(k<extra?1:0);html+='<div class="rail" style="--slots:'+n+'">'+items.slice(at,at+n).join('')+'</div>';at+=n}
+    return html;
   }
   function renderArea(){
     const g=groups[state.area],list=ideas.filter(i=>i.g===state.area&&!i.own);
@@ -74,7 +78,8 @@ const Play=(()=>{
     stage.querySelector('.play-head h1').textContent=g.title;
     stage.querySelector('.play-shelves').innerHTML=shelfRows(list);
     stage.style.setProperty('--tint',g.tint);
-    for(const b of stage.querySelectorAll('.pick'))bindPick(b);
+    for(const b of stage.querySelectorAll('.pick:not(.add-own)'))bindPick(b);
+    stage.querySelector('.add-own').onclick=()=>{Sound.wake();openOwn()};
     seenAreas.add(state.area);
   }
   function refresh(){
@@ -414,22 +419,14 @@ const Play=(()=>{
   }
 
   // ---------- start and stop ----------
-  function tools(){
-    const nav=document.querySelector('#mastTools');
-    nav.innerHTML='<button class="tool replay" title="'+esc(U.restart)+'" aria-label="'+esc(U.restart)+'">↺</button><button class="tool sound" aria-pressed="'+Sound.on+'">♪</button>';
-    const sound=nav.querySelector('.sound');
-    const label=()=>{sound.setAttribute('aria-pressed',Sound.on);sound.setAttribute('aria-label',Sound.on?U.soundOn:U.soundOff);sound.title=Sound.on?U.soundOn:U.soundOff};
-    sound.onclick=()=>{Sound.toggle();label()};label();
-    nav.querySelector('.replay').onclick=()=>go(0);
-  }
   // The little intro before the game: one question, and the five problems as ways in.
   // It is shown once per visit; replaying the story brings it back.
   let asked=false;
   try{asked=sessionStorage.getItem('idea-map-asked')==='yes'}catch{}
   function ask(){
-    const row=(k,title,sub,marble)=>'<button class="ask-row" data-ask="'+k+'">'+marble+'<span class="ask-text"><b>'+esc(title)+'</b><small>'+esc(sub)+'</small></span><i aria-hidden="true">›</i></button>';
-    app.innerHTML='<section class="world play ask"><div class="ask-stage"><h1 tabindex="-1">'+esc(state.name?named(U.askTitleNamed):U.askTitle)+'</h1><p class="ask-body">'+esc(U.askBody)+'</p>'+
-      '<div class="ask-list">'+groups.map((g,k)=>{const n=ideas.filter(i=>i.g===k&&!i.own).length;return row(k,g.title,fill(U.askIdeas,{n}),ball({g:k,shade:0}))}).join('')+
+    const row=(k,title,sub,marble)=>'<button class="ask-row" data-ask="'+k+'">'+marble+'<span class="ask-text"><b>'+esc(title)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</span><i aria-hidden="true">›</i></button>';
+    app.innerHTML='<section class="world play ask"><div class="ask-stage"><h1 tabindex="-1">'+esc(state.name?named(U.askTitleNamed):U.askTitle)+'</h1>'+
+      '<div class="ask-list">'+groups.map((g,k)=>row(k,g.title,'',ball({g:k,shade:0}))).join('')+
       row('own',U.askOther,U.askOtherHint,'<span class="ball own" aria-hidden="true"></span>')+'</div>'+
       '<nav class="ask-nav"><button class="subtle" data-action="back">'+esc(U.back)+'</button></nav></div></section>';   // app.js handles data-action="back"
     for(const b of app.querySelectorAll('.ask-row'))b.onclick=()=>{
@@ -456,19 +453,18 @@ const Play=(()=>{
       '<svg class="play-art" aria-hidden="true"></svg>'+
       '<button class="play-jar"><span class="bottle" aria-hidden="true"><span class="bottle-inner"><span class="bottle-scale">'+bottleArt+'</span><span class="cork"></span></span></span>'+
       '<span class="jar-label"><span class="jar-name"></span><span class="jar-count">0</span></span><span class="jar-open">'+esc(U.jarOpen)+'</span></button>'+
-      '<button class="own-add"><span class="ball own" aria-hidden="true"></span><span>'+esc(U.ownAdd)+'</span></button>'+
+      '<button class="play-back subtle" data-action="restart">'+esc(U.back)+'</button>'+
       '<button class="send-jar primary" hidden></button>'+
       '<div class="play-loose"></div><p class="play-live" aria-live="polite"></p></div></section>';
     stage=app.querySelector('.play-stage');art=stage.querySelector('.play-art');
     engine=Engine.create({gravity:{x:0,y:GRAVITY},positionIterations:8});statics=[];
     Events.on(engine,'collisionStart',collide);
-    renderArea();remountJar();layout();refresh();hint(U.hintDrop,0);tools();
+    renderArea();remountJar();layout();refresh();hint(U.hintDrop,0);
     Track.send('game');
     for(const dot of stage.querySelectorAll('.area-dot'))dot.onclick=()=>setArea(+dot.dataset.area);
     for(const b of stage.querySelectorAll('.area-step'))b.onclick=()=>setArea(state.area+ +b.dataset.step);
     stage.querySelector('.play-jar').onclick=openJar;
     stage.querySelector('.send-jar').onclick=openSend;
-    stage.querySelector('.own-add').onclick=()=>{Sound.wake();openOwn()};
     // Swiping sideways anywhere on the page moves between areas. A swipe that starts on a marble or a button stays
     // theirs (dragging a marble off the shelf), and a mostly vertical stroke is not a swipe.
     let swipe=null;

@@ -142,7 +142,7 @@ dialog{background:var(--studio);border:1px solid #e2d8c8;box-shadow:0 20px 80px 
 .answer,.headline:has(.whatif) p{opacity:0;transition:opacity .4s ease}
 .stressed .answer,.stressed .headline:has(.whatif) p{opacity:1}
 /* Tension: after the burst the screen holds on "What if…" for a moment before the answer lands, and the question follows it. */
-.stressed .answer{transition-delay:.9s}.stressed .headline:has(.whatif) p{transition-delay:1.5s}
+.stressed .answer{transition-delay:.9s}.stressed .headline:has(.whatif) p{transition-delay:.9s}
 
 /* ---- Marble page ----
    Marbles are cut to clean circles with a soft shadow and arrive spreading out from the first one. After about a second they part
@@ -232,3 +232,6 @@ input,textarea,select{font-size:max(16px,1em)}
 ::view-transition-old(portrait){display:none}
 /* No rubber-band bounce: every screen is exactly one viewport tall. */
 html{overscroll-behavior-y:none}
+/* The Back button sits in the same spot on every screen: the story, the marble page and the question before the game. */
+.world:has(.flood) .controls{padding:24px 7vw 30px}
+@media(max-width:720px){.world:has(.flood) .controls{padding:18px 7vw 24px}}
