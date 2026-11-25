@@ -311,8 +311,10 @@ function flood(origin){
   app.innerHTML='<section class="world"><div class="flood"><div class="specimens" aria-hidden="true"></div><div class="clearing" aria-hidden="true"></div><div class="covercopy"><h1 tabindex="-1">'+esc(S.swarm)+'</h1><p>'+esc(S.swarmBody)+'</p></div></div>'+controls(U.sort)+'</section>';
   fillMarbleField();
   const world=app.firstElementChild,stage=world.firstElementChild;
-  // Five beats: the screen fills with marbles, they make room, the sentence arrives, the question takes its place. Then the button to move on.
-  animate(5200,f=>{if(f>=.21)stage.classList.add('settled');if(f>=.75)stage.classList.add('asked')},()=>world.classList.add('ready'));
+  // Four beats, each one a tap (see go()): the screen is full of marbles; a tap and they make room and the sentence arrives; a tap and the question
+  // takes its place; a tap and the game opens. With reduced motion everything is shown at once.
+  cancelAnimationFrame(raf);
+  if(reduced.matches){stage.classList.add('settled','asked');world.classList.add('ready')}
   if(origin&&!reduced.matches){
     const seed=app.querySelector('[data-seed="thinking-1"]');
     const img=seed?.querySelector('img'),dest=seed?.getBoundingClientRect();
@@ -370,9 +372,14 @@ function go(n,after){
   const handoff=source?source.getBoundingClientRect():null;
   if(n===11)n=from===12?10:12;                 // step 11 (the plain list) is retired: the flood leads straight into the game
   n=Math.max(0,Math.min(12,n));
-  // Marble page: a tap while the sentence is still up brings the question, the next tap moves on.
+  // Marble page: the first tap parts the marbles and brings the sentence, the second brings the question, the third moves on.
   const asking=from===10&&n>10&&app.querySelector('.flood:not(.asked)');
-  if(asking){cancelAnimationFrame(raf);asking.classList.add('settled','asked');asking.parentNode.classList.add('ready');return}
+  if(asking){
+    cancelAnimationFrame(raf);
+    if(!asking.classList.contains('settled'))asking.classList.add('settled');
+    else{asking.classList.add('asked');asking.parentNode.classList.add('ready')}
+    return;
+  }
   // "Are you worried?": the first click on that scene brings the question, the next one moves on.
   const held=from===2&&n>2&&app.querySelector('.headline:not(.leaving) .held:not(.shown)');
   if(held){held.classList.add('shown');return}
