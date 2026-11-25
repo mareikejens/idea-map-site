@@ -339,9 +339,11 @@ const Play=(()=>{
     if(!picked.length)return openSheet('<div class="detail jar-detail"><h2>'+esc(jarTitle())+'</h2><p>'+esc(U.emptyHint)+'</p></div>');
     openSheet('<div class="detail jar-detail"><h2>'+esc(jarTitle())+'</h2><p class="reading">'+esc(text)+'</p>'+
       '<div class="mix" aria-hidden="true">'+counts.map(c=>'<i style="flex:'+c.n+';background:'+c.tint+'"></i>').join('')+'</div>'+
-      picked.map(i=>'<div class="item">'+ball(i)+'<span>'+esc(i.title)+(i.own?' <em>'+esc(U.ownTag)+'</em>':'')+'</span><button data-remove="'+esc(i.id)+'">'+esc(U.takeOutShort)+'</button></div>').join('')+
+      picked.map(i=>'<div class="item"><button class="open-idea" data-open="'+esc(i.id)+'">'+ball(i)+'<span>'+esc(i.title)+(i.own?' <em>'+esc(U.ownTag)+'</em>':'')+'</span></button><button data-remove="'+esc(i.id)+'">'+esc(U.takeOutShort)+'</button></div>').join('')+
       '<button class="primary jar-go">'+esc(U.send)+'</button></div>');
     for(const b of detail.querySelectorAll('[data-remove]'))b.onclick=()=>{takeOut(byId(b.dataset.remove));openJar()};
+    // A marble in the jar opens its idea card again, the same card as on the shelf.
+    for(const b of detail.querySelectorAll('[data-open]'))b.onclick=()=>openIdea(byId(b.dataset.open));
     detail.querySelector('.jar-go').onclick=openSend;
   }
   // One field and one button. A note is optional and tucked away; the name is only asked for if the first page did not get one.
