@@ -1,3 +1,6 @@
+// iPhone Chrome and Brave size 100svh as if their toolbars were not there, so the page ended up a little taller than what
+// you can see: a tiny scroll, and the bottom buttons sitting under the toolbar. innerHeight is the visible height.
+{const setVh=()=>document.documentElement.style.setProperty('--vh',innerHeight+'px');setVh();addEventListener('resize',setVh);addEventListener('orientationchange',setVh)}
 'use strict';
 const {welcome:W,about:A,story:S,ui:U,groups}=window.IDEA_MAP;
 document.querySelector('.mast .face').setAttribute('aria-label',A.open);
