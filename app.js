@@ -391,6 +391,9 @@ function go(n,after){
   const sameStage=from>=1&&from<=9&&n>=1&&n<=9&&app.querySelector('.stage.machine');
   endHandover();
   if(from===10&&n===12&&booted&&!reduced.matches&&app.querySelector('.specimen'))handover(swap);
+  // Cover → story: no cross-fade of the whole page. The portrait flies up on its own (dockPortrait), and a cross-fade
+  // would also keep a second copy of it fading out in place. Only the new screen fades in.
+  else if(from===0&&n===1&&booted&&!reduced.matches){swap();app.animate([{opacity:0},{opacity:1}],{duration:450,easing:'ease'})}
   else if(!booted||sameStage||reduced.matches||!document.startViewTransition)swap();
   else document.startViewTransition(swap);
   booted=true;
