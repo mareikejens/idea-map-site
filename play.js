@@ -334,7 +334,16 @@ const Play=(()=>{
     form.title.focus();
   }
   // Tapping the jar shows what is in it. Sending is its own, shorter step.
+  // A card opened from the jar: a tap on the left third of the screen goes back to the jar, like stepping back
+  // through stories. Buttons and links keep their own job.
+  let backToJar=false;
+  sheet.addEventListener('click',e=>{
+    if(!backToJar||e.clientX>innerWidth/3||e.target.closest('button,a,input,textarea,select,summary'))return;
+    e.stopImmediatePropagation();openJar();
+  },true);
+  sheet.addEventListener('close',()=>{backToJar=false});
   function openJar(){
+    backToJar=false;closeCard();
     const picked=[...state.picked].map(byId),{text,counts}=reading();
     if(!picked.length)return openSheet('<div class="detail jar-detail"><h2>'+esc(jarTitle())+'</h2><p>'+esc(U.emptyHint)+'</p></div>');
     openSheet('<div class="detail jar-detail"><h2>'+esc(jarTitle())+'</h2><p class="reading">'+esc(text)+'</p>'+
@@ -343,7 +352,7 @@ const Play=(()=>{
       '<button class="primary jar-go">'+esc(U.send)+'</button></div>');
     for(const b of detail.querySelectorAll('[data-remove]'))b.onclick=()=>{takeOut(byId(b.dataset.remove));openJar()};
     // A marble in the jar opens its idea card again, the same card as on the shelf.
-    for(const b of detail.querySelectorAll('[data-open]'))b.onclick=()=>openIdea(byId(b.dataset.open));
+    for(const b of detail.querySelectorAll('[data-open]'))b.onclick=()=>{openIdea(byId(b.dataset.open));backToJar=true};
     detail.querySelector('.jar-go').onclick=openSend;
   }
   // One field and one button. A note is optional and tucked away; the name is only asked for if the first page did not get one.
