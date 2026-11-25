@@ -428,7 +428,7 @@ const Play=(()=>{
   try{asked=sessionStorage.getItem('idea-map-asked')==='yes'}catch{}
   function ask(){
     const row=(k,title,sub,marble)=>'<button class="ask-row" data-ask="'+k+'">'+marble+'<span class="ask-text"><b>'+esc(title)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</span><i aria-hidden="true">›</i></button>';
-    app.innerHTML='<section class="world play ask"><div class="ask-stage"><h1 tabindex="-1">'+esc(state.name?named(U.askTitleNamed):U.askTitle)+'</h1><p class="ask-body">'+esc(U.askBody)+'</p>'+
+    app.innerHTML='<section class="world play ask"><div class="ask-stage"><h1 tabindex="-1">'+esc(state.name?named(U.askTitleNamed):U.askTitle)+'</h1>'+
       '<div class="ask-list">'+groups.map((g,k)=>row(k,g.title,'',ball({g:k,shade:0}))).join('')+
       row('own',U.askOther,U.askOtherHint,'<span class="ball own" aria-hidden="true"></span>')+'</div>'+
       '<nav class="ask-nav"><button class="subtle" data-action="back">'+esc(U.back)+'</button></nav></div></section>';   // app.js handles data-action="back"
