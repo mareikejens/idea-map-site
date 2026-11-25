@@ -469,10 +469,16 @@ const Play=(()=>{
     stage.querySelector('.play-jar').onclick=openJar;
     stage.querySelector('.send-jar').onclick=openSend;
     stage.querySelector('.own-add').onclick=()=>{Sound.wake();openOwn()};
-    // Swiping sideways on the title moves between areas.
-    const head=stage.querySelector('.play-head');let startX=null;
-    head.onpointerdown=e=>{startX=e.target.closest('button')?null:e.clientX};
-    head.onpointerup=e=>{if(startX===null)return;const d=e.clientX-startX;startX=null;if(Math.abs(d)>45)setArea(state.area+(d<0?1:-1))};
+    // Swiping sideways anywhere on the page moves between areas. A swipe that starts on a marble or a button stays
+    // theirs (dragging a marble off the shelf), and a mostly vertical stroke is not a swipe.
+    let swipe=null;
+    stage.onpointerdown=e=>{swipe=e.isPrimary&&!e.target.closest('button,a,input,textarea,select')?{id:e.pointerId,x:e.clientX,y:e.clientY}:null};
+    stage.onpointerup=e=>{
+      if(!swipe||e.pointerId!==swipe.id)return;
+      const dx=e.clientX-swipe.x,dy=e.clientY-swipe.y;swipe=null;
+      if(Math.abs(dx)>45&&Math.abs(dx)>1.5*Math.abs(dy))setArea(state.area+(dx<0?1:-1));
+    };
+    stage.onpointercancel=()=>{swipe=null};
   }
   function unmount(){
     if(state.step!==12){asked=false;try{sessionStorage.removeItem('idea-map-asked');sessionStorage.removeItem('idea-map-reached')}catch{}}   // leaving for the story: ask again next time
