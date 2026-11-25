@@ -5,7 +5,7 @@ window.IDEA_MAP = {
     "title": "Hi, I’m Mareike.",
     "subtitle": "About to lose my marbles.",
     "label": "Your name, for your marble jar",
-    "notice": "Mareike sees which ideas you open and what you put in your jar."
+    "notice": ""
   },
   "about": {
     "open": "About Mareike",

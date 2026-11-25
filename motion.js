@@ -9,15 +9,16 @@ const MarbleRun = (() => {
   // The opening never climbs. The marble starts high on a calm slope and creeps to the brink while the worry
   // builds. The acceleration belongs to the collapse scene: there it tips over the brink, plunges ever faster,
   // and the run gives way as it arrives.
-  const plungeHeight=105, plungeFrom=320, plungeTo=548, brink=315;
-  // Scene 3 spends its first third on the plunge; the break clock then starts just before the run lets go.
-  const fall={start:.36,from:.22};
+  // The drop is tall and short: about 50° at its steepest, so the marble visibly races rather than rolls.
+  const plungeHeight=150, plungeFrom=352, plungeTo=548, brink=345;
+  // Scene 3 spends its first quarter on the plunge (about 0.7s); the break clock then starts just before the run lets go.
+  const fall={start:.26,from:.22};
   const plunge = x => {const u=clamp((x-plungeFrom)/(plungeTo-plungeFrom));return u*u*(3-2*u)};
   const ground = x => 148+.055*x
     - plungeHeight*(1-plunge(x))
     + (x>=1480?58:0)
     - .055*Math.max(0,x-1630);
-  const camera = {1:[45,188,680],2:[348,200,720],3:[800,238,1280],4:[800,238,1280],
+  const camera = {1:[45,143,680],2:[348,155,720],3:[800,238,1280],4:[800,238,1280],
     5:[650,222,740],6:[860,215,492],7:[1162,250,680],8:[1480,267,535],9:[1763,305,680]};
   const times = {1:2500,2:2200,3:1450,4:1500,5:1500,6:4400,7:2800,8:2200,9:3800};
   function railPath(a,b){
@@ -148,7 +149,7 @@ const MarbleRun = (() => {
       plungeRun=plungeRun||timedRail(brink,550+13*fall.from/explosion.onset,45);
       ({x,y}=ride(plungeRun(t/fall.start)));
     }else if(breaking)({x,y}=explosion.ball(breakage,y));
-    const stressReached=(step===3&&breakage>=explosion.onset)||(step===6&&bridge===1)||
+    const stressReached=(step===3&&breakage>=explosion.impact)||(step===6&&bridge===1)||
       (step===7&&t>=.37)||(step===8&&x>=1441)||(step===9&&t>=1);
     // tremor: how hard the run shakes (0 to 1). front: cracks left of this x have appeared.
     const tremor=step===2?ease(clamp((t-.2)/.5)):step===3?1-clamp(t/(fall.start*.5)):0;

@@ -139,7 +139,7 @@ const Play=(()=>{
       layout.funnelTop=mouth.y-drop-30;
       // Above the funnel, one sloped ramp turns the screen into a small marble run: the marble rolls one way, drops, rolls back.
       // It is left out when there is no room between the shelves and the funnel (small phones, full shelves).
-      const shelves=stage.querySelector('.play-shelves').getBoundingClientRect(),first=shelves.bottom-S.top+34,reach=W-84,rise=reach*.25;
+      const shelves=stage.querySelector('.play-shelves').getBoundingClientRect(),first=shelves.bottom-S.top+34,reach=W-84,rise=reach*.33;
       for(let k=0,y=first;k<1&&y+rise<=mouth.y-drop-30;k++,y+=rise+62){
         const fromLeft=k%2===0,a={x:fromLeft?-4:W+4,y},b={x:fromLeft?reach:W-reach,y:y+rise};
         add(bar(a,b,7,{restitution:.25}),'rail');svg+='<line class="rail-line" x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'"/>';
@@ -158,7 +158,7 @@ const Play=(()=>{
   }
   const place=(el,x,y,r,angle=0,scale=1)=>el.style.transform='translate('+(x-r)+'px,'+(y-r)+'px) rotate('+angle+'rad) scale('+scale+')';
   function spawn(idea,el,r,pos,velocity){
-    const body=Bodies.circle(pos.x,pos.y,r,{restitution:.32,friction:.03,frictionAir:0,frictionStatic:.05,density:.002,label:'marble'});
+    const body=Bodies.circle(pos.x,pos.y,r,{restitution:.3,friction:0,frictionAir:0,frictionStatic:0,density:.002,label:'marble'});
     Body.setVelocity(body,velocity);Body.setAngularVelocity(body,velocity.x*.012);
     const m={idea,el,body,r,r0:r,age:0,calm:0,nudges:0,lastY:pos.y};
     body.plugin.marble=m;Composite.add(engine.world,body);loose.set(idea.id,m);
@@ -210,6 +210,7 @@ const Play=(()=>{
       // Glass has a top speed here. Without it a marble that fell a long way jumps clean over the jar and dawdles back.
       const v=Body.getVelocity(m.body),speed=Math.hypot(v.x,v.y);
       if(speed>TOP_SPEED)Body.setVelocity(m.body,{x:v.x*TOP_SPEED/speed,y:v.y*TOP_SPEED/speed});
+      Body.setAngularVelocity(m.body,v.x/m.r*STEP/FRAME);       // the surfaces are frictionless so nothing dawdles; the spin is added by hand to match the travel
       // Right over the mouth, sideways motion dies away and the marble drops in.
       if(x>mouth.left&&x<mouth.right&&y>mouth.y-m.r-16)Body.setVelocity(m.body,{x:v.x*.86,y:Math.max(v.y,1.6)});
       if(!Number.isFinite(x+y)){removeLoose(m);refresh();continue}
@@ -367,7 +368,7 @@ const Play=(()=>{
     if(!sealed)form.email.focus({preventScroll:true});
   }
   async function send(form,coffee){
-    const status=form.querySelector('.send-status'),button=form.querySelector('.primary'),email=form.email.value.trim(),name=form.name?.value.trim().replace(/\s+/g,' ');
+    const status=form.querySelector('.send-status'),button=form.querySelector('.primary'),email=form.email.value.trim(),name=form.elements.name?.value.trim().replace(/\s+/g,' ');   // form.name alone would be the form's own name attribute
     const valid=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     // Over coffee the calendar asks for the email itself, so here it is optional. A plain send needs one to get a reply.
     if(!valid&&(!coffee||email)){status.textContent=U.sendNeedEmail;form.email.focus();return}

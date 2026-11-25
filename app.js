@@ -60,16 +60,16 @@ function machine(stage,step){
   const {svg,nodes}=rig;
   const closeUp=step<=2,from=lastScene;
   const carried=!!lastCamera&&Math.abs(step-from)===1;
-  const target=step===0?[-300,93,660]:MarbleRun.camera[step];
+  const target=step===0?[-300,48,660]:MarbleRun.camera[step];
   const start=carried?lastCamera:target;
   const entryPose=carried&&from>0?lastPose:null;
   // Breaking and mending are one clock run in two directions: pick it up wherever the other scene left it.
   const f0=!entryPose?0:step===4&&from===3?1-entryPose.breakage:step===3&&from===4?MarbleRun.fall.start+(1-MarbleRun.fall.start)*MarbleRun.clamp((entryPose.breakage-MarbleRun.fall.from)/(1-MarbleRun.fall.from)):0;
-  const duration=Math.max(700,[0,4900,3900,3100,2600,3500,5100,3850,3450,4600][step]*(1-f0));
+  const duration=Math.max(700,[0,4900,3900,2800,2600,3500,5100,3850,3450,4600][step]*(1-f0));
   // A scene left early hands its marble over: for half a second the pose glides from where it was to where it belongs.
   const joinSpan=f0?0:MarbleRun.clamp(520/duration);
-  // "I am." answers first, then "What if…" gets its moment: the collapse scene opens on a held shot of the marble at the brink.
-  const hold=step===3&&!f0?2900:0;
+  // "I am." and the marble goes: only a breath at the brink while the words change, then it races down the drop.
+  const hold=step===3&&!f0?400:0;
   lastScene=step;
   // f is the place in the scene's choreography, u the plain time since the scene began (both 0 to 1).
   function paint(f,u){
@@ -204,7 +204,7 @@ function story(){
   const title=group?runWords(group.runLabel):s===2?worried:esc([null,S.intro,null,null,S.even,S.transition][s]);
   const body=s===1?S.introBody:group?.question;
   const kind=group?'station':s<=2?'opening':'';
-  // The first danger is posed as a question: "What if…" stands alone while the marble rolls to the edge, and the answer appears as it tips.
+  // The first danger is posed as a question: "I am." comes first while the marble races down the drop, "What if…" joins it, and the answer appears as the marble bursts.
   // "I am." answers the question from the scene before, then the first danger follows.
   const lead=s===3?'<span class="iam">'+esc(S.iAm)+'</span><span class="whatif">'+esc(S.whatIf)+'</span> ':'';
   const head='<h1 tabindex="-1" class="'+(s===2?'worry':'')+'">'+lead+(lead?'<span class="answer">'+title+'</span>':title)+'</h1>'+(body?'<p>'+lateWords(body)+'</p>':'');

@@ -111,8 +111,8 @@ dialog{background:var(--studio);border:1px solid #e2d8c8;box-shadow:0 20px 80px 
 /* Between scenes the words fade out before the next line fades in (ink-in restarts when .leaving comes off). */
 .headline.leaving{animation:none;opacity:0;translate:0 -4px;transition:opacity .2s ease,translate .2s ease}
 @media(prefers-reduced-motion:no-preference){
-  /* "I am." stands alone for a beat before "What if…" joins it (the scene holds the marble still for both). */
-  .iam+.whatif{animation:late-in .4s 1.4s both}
+  /* "I am." stands alone while the marble races down; "What if…" joins it just before the burst. */
+  .iam+.whatif{animation:late-in .35s .8s both}
   /* A [bracketed] word in the body line lands a beat after the sentence, like a spoken pause. */
   .headline .late{animation:late-in .35s 1.6s both}
   @keyframes late-in{from{opacity:0}to{opacity:1}}

@@ -82,6 +82,6 @@ const RunExplosion = (() => {
     });
     return out;
   }
-  return {onset,art,ball,transforms};
+  return {onset,impact,art,ball,transforms};
 })();
 if(typeof module!=='undefined')module.exports=RunExplosion;
