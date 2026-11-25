@@ -1,0 +1,452 @@
+// The last screen as a game: let a marble go and it rolls down a small porcelain marble run into the jar. It cannot miss.
+// Around that: five problems to browse, a card per idea, your own marbles, and sending the jar.
+// There is no score on purpose: a score would reward filling the jar instead of choosing.
+const Play=(()=>{
+  const {Events}=Matter;
+  const FRAME=1000/60, STEP=1000/240;                 // Matter measures speed per 60 Hz frame; we simulate 4 small steps per frame
+  const GRAVITY=1.3, TOP_SPEED=9.5;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const cap=(v,max)=>{const s=Math.hypot(v.x,v.y);return s>max?{x:v.x*max/s,y:v.y*max/s}:v};
+  const byId=id=>ideas.find(i=>i.id===id);
+  const fill=(text,values)=>text.replace(/\{(\w+)\}/g,(_,k)=>values[k]);
+
+  let stage=null,art=null,engine=null,statics=[],mouth=null,W=0,H=0,frame=0,last=0,acc=0,hintTimer=0,seenAreas=new Set(),told=new Set();
+  const loose=new Map();                              // idea id → marble that is in the air
+
+  // ---------- sound: short glass and porcelain tones made on the fly, no audio files ----------
+  const Sound=(()=>{
+    let audio=null,on=true,lastTime=0;
+    try{on=sessionStorage.getItem('idea-map-sound')!=='off'}catch{}
+    function wake(){if(!on)return;try{audio??=new AudioContext();if(audio.state==='suspended')audio.resume()}catch{}}
+    function tone(partials,level){
+      if(!on||!audio||audio.state!=='running')return;
+      const t=audio.currentTime;if(t-lastTime<.022)return;lastTime=t;
+      partials.forEach(([hz,length],k)=>{
+        const o=audio.createOscillator(),g=audio.createGain();
+        o.frequency.value=hz;g.gain.setValueAtTime(level/(k+1),t);g.gain.exponentialRampToValueAtTime(.0001,t+length);
+        o.connect(g).connect(audio.destination);o.start(t);o.stop(t+length);
+      });
+    }
+    const wobble=()=>.97+Math.random()*.06;
+    return {
+      wake,
+      get on(){return on},
+      toggle(){on=!on;try{sessionStorage.setItem('idea-map-sound',on?'on':'off')}catch{}wake();return on},
+      clink(power,pitch=1){if(power>.7)tone([[2350*pitch*wobble(),.16],[3870*pitch*wobble(),.09],[5900*pitch,.05]],Math.min(.09,power*.007))},
+      land(){tone([[1568,.3],[2093,.24],[3136,.12]],.07)}
+    };
+  })();
+  Events.on(jarEngine,'collisionStart',e=>{
+    if(jarSettling||!stage)return;
+    for(const p of e.pairs)Sound.clink(Math.hypot(p.bodyA.velocity.x-p.bodyB.velocity.x,p.bodyA.velocity.y-p.bodyB.velocity.y)*2,.82);
+  });
+  const buzz=ms=>{try{navigator.vibrate?.(ms)}catch{}};
+
+  // ---------- what the jar says about its owner ----------
+  function reading(){
+    const picked=[...state.picked].map(byId),own=picked.filter(i=>i.own).length;
+    const counts=groups.map((g,k)=>({k,title:g.title,tint:g.tint,n:picked.filter(i=>i.g===k).length})).filter(c=>c.n);
+    if(!counts.length)return {text:'',counts};
+    const ranked=[...counts].sort((a,b)=>b.n-a.n);
+    let text;
+    if(ranked.length===1||ranked[0].n>ranked[1].n)text=fill(U.readingOne,{a:ranked[0].title});
+    else if(ranked.length===2||ranked[1].n>ranked[2].n)text=fill(U.readingTwo,{a:ranked[0].title,b:ranked[1].title});
+    else text=fill(U.readingMany,{n:ranked.length});
+    if(own)text+=' '+fill(U.readingOwn,{n:own});
+    return {text,counts};
+  }
+  const signature=()=>[...state.picked].sort().join('|');
+  function jarText(note=''){
+    const picked=[...state.picked].map(byId);
+    return U.message+'\n\n'+picked.map(i=>'• '+i.title+(i.own?' ('+U.ownTag.toLowerCase()+(i.note?': '+i.note:'')+')':'')).join('\n')+(note?'\n\n'+note:'')+'\n\n'+state.fullName;
+  }
+
+  // ---------- the screen ----------
+  function shelfRows(list){
+    const perRow=list.length<=3?list.length:Math.ceil(list.length/2);
+    const rows=[];for(let k=0;k<list.length;k+=perRow)rows.push(list.slice(k,k+perRow));
+    return rows.map(row=>'<div class="rail" style="--slots:'+row.length+'">'+row.map(i=>
+      '<button class="pick" data-id="'+esc(i.id)+'">'+ball(i)+'<span class="pick-name">'+esc(i.title)+'</span></button>').join('')+'</div>').join('');
+  }
+  function renderArea(){
+    const g=groups[state.area],list=ideas.filter(i=>i.g===state.area&&!i.own);
+    stage.querySelector('.area-kicker').textContent=fill(U.areaOf,{n:state.area+1,total:groups.length});
+    stage.querySelector('.play-head h1').textContent=g.title;
+    stage.querySelector('.play-shelves').innerHTML=shelfRows(list);
+    stage.style.setProperty('--tint',g.tint);
+    for(const b of stage.querySelectorAll('.pick'))bindPick(b);
+    seenAreas.add(state.area);
+  }
+  function refresh(){
+    const count=state.picked.size;
+    stage.querySelector('.jar-name').textContent=jarTitle();
+    stage.querySelector('.jar-count').textContent=count;
+    for(const b of stage.querySelectorAll('.pick')){
+      b.classList.toggle('selected',state.picked.has(b.dataset.id));
+      b.classList.toggle('away',loose.has(b.dataset.id));
+      b.classList.toggle('read',state.read.has(b.dataset.id));
+    }
+    groups.forEach((g,k)=>{
+      const list=ideas.filter(i=>i.g===k&&!i.own),read=list.filter(i=>state.read.has(i.id)).length,dot=stage.querySelector('[data-area="'+k+'"]');
+      dot.style.setProperty('--done',read/list.length);
+      dot.classList.toggle('current',k===state.area);
+      dot.setAttribute('aria-label',g.title+'. '+fill(U.areaRead,{read,total:list.length}));
+      dot.setAttribute('aria-current',k===state.area);
+    });
+    const send=stage.querySelector('.send-jar'),sealed=count>0&&state.sent===signature();
+    send.hidden=!count;send.textContent=sealed?U.sent+' ✓':U.send;send.classList.toggle('sealed',sealed);
+    stage.querySelector('.play-jar').classList.toggle('sealed',sealed);
+    stage.querySelector('.play-jar').classList.toggle('filled',count>0);
+  }
+  function hint(text,hold=5200){
+    const p=stage.querySelector('.play-hint');clearTimeout(hintTimer);
+    p.textContent=text;p.classList.toggle('nudge',hold>0);
+    if(hold>0)hintTimer=setTimeout(()=>{if(stage){p.textContent=U.hintDrop;p.classList.remove('nudge')}},hold);
+  }
+  // Say something once, the first time it becomes relevant.
+  function tell(key,text){if(told.has(key))return;told.add(key);hint(text,7000)}
+  function setArea(k){
+    k=(k+groups.length)%groups.length;                 // the arrows wrap around
+    if(k===state.area)return;
+    const forward=(k-state.area+groups.length)%groups.length<=groups.length/2?1:-1;
+    state.area=k;save();renderArea();layout();refresh();
+    if(!reduced.matches){
+      stage.querySelector('.play-head h1').animate([{opacity:0,transform:'translateX('+forward*18+'px)'},{opacity:1,transform:'none'}],{duration:320,easing:'cubic-bezier(.2,.8,.2,1)'});
+      for(const [n,b] of [...stage.querySelectorAll('.pick')].entries())
+        b.animate([{opacity:0,transform:'translateX('+forward*26+'px)'},{opacity:1,transform:'none'}],{duration:420,delay:n*40,easing:'cubic-bezier(.2,.8,.2,1)',fill:'backwards'});
+    }
+    if(seenAreas.size===groups.length)tell('all',U.hintAllAreas);
+  }
+
+  // ---------- the physical world: walls, ramp, funnel and the jar, all in the stage's own pixels ----------
+  function layout(){
+    const S=stage.getBoundingClientRect();W=S.width;H=S.height;
+    const jr=stage.querySelector('.bottle').getBoundingClientRect(),s=jr.width/150,left=jr.left-S.left,top=jr.top-S.top;
+    const at=(x,y)=>({x:left+x*s,y:top+y*s});
+    mouth={x:at(75,0).x,y:at(0,14).y,left:at(38,0).x,right:at(112,0).x,s,box:{left,top,right:left+jr.width,bottom:top+jr.height}};
+    Composite.remove(engine.world,statics);statics=[];
+    const still={isStatic:true,restitution:.3,friction:.05};
+    const add=(body,label,extra)=>{body.label=label;Object.assign(body.plugin,extra);statics.push(body);return body};
+    const bar=(a,b,thick,options)=>Bodies.rectangle((a.x+b.x)/2,(a.y+b.y)/2,Math.hypot(b.x-a.x,b.y-a.y)+2,thick,{...still,...options,angle:Math.atan2(b.y-a.y,b.x-a.x)});
+    add(Bodies.rectangle(-100,H/2,200,H*6,still),'wall');
+    add(Bodies.rectangle(W+100,H/2,200,H*6,still),'wall');
+    let svg='';
+    {
+      // Two porcelain rails funnel everything into the jar: this is what makes the drop impossible to miss.
+      const drop=Math.min(84,mouth.left*.5),rails=[[{x:-4,y:mouth.y-drop},{x:mouth.left-1,y:mouth.y-1}],[{x:W+4,y:mouth.y-drop},{x:mouth.right+1,y:mouth.y-1}]];
+      for(const [a,b] of rails){add(bar(a,b,7,{restitution:.3}),'rail');svg+='<line class="rail-line" x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'"/>'}
+      layout.railY=x=>x<mouth.left?mouth.y-drop+drop*clamp(x/mouth.left,0,1):x>mouth.right?mouth.y-drop+drop*clamp((W-x)/(W-mouth.right),0,1):mouth.y;
+      layout.funnelTop=mouth.y-drop-30;
+      // Above the funnel, one sloped ramp turns the screen into a small marble run: the marble rolls one way, drops, rolls back.
+      // It is left out when there is no room between the shelves and the funnel (small phones, full shelves).
+      const shelves=stage.querySelector('.play-shelves').getBoundingClientRect(),first=shelves.bottom-S.top+34,reach=W-84,rise=reach*.25;
+      for(let k=0,y=first;k<1&&y+rise<=mouth.y-drop-30;k++,y+=rise+62){
+        const fromLeft=k%2===0,a={x:fromLeft?-4:W+4,y},b={x:fromLeft?reach:W-reach,y:y+rise};
+        add(bar(a,b,7,{restitution:.25}),'rail');svg+='<line class="rail-line" x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'"/>';
+      }
+    }
+    Composite.add(engine.world,statics);
+    art.setAttribute('viewBox','0 0 '+W+' '+H);
+    art.innerHTML=svg;
+  }
+
+  // ---------- a marble in the air ----------
+  function orb(idea,r){
+    const holder=document.createElement('span');holder.innerHTML=ball(idea);
+    const el=holder.firstElementChild;el.classList.add('loose-orb');el.style.setProperty('--diam',2*r+'px');
+    stage.querySelector('.play-loose').append(el);return el;
+  }
+  const place=(el,x,y,r,angle=0,scale=1)=>el.style.transform='translate('+(x-r)+'px,'+(y-r)+'px) rotate('+angle+'rad) scale('+scale+')';
+  function spawn(idea,el,r,pos,velocity){
+    const body=Bodies.circle(pos.x,pos.y,r,{restitution:.32,friction:.03,frictionAir:0,frictionStatic:.05,density:.002,label:'marble'});
+    Body.setVelocity(body,velocity);Body.setAngularVelocity(body,velocity.x*.012);
+    const m={idea,el,body,r,r0:r,age:0,calm:0,nudges:0,lastY:pos.y};
+    body.plugin.marble=m;Composite.add(engine.world,body);loose.set(idea.id,m);
+    refresh();run();return m;
+  }
+  function removeLoose(m){Composite.remove(engine.world,m.body);m.el.remove();loose.delete(m.idea.id)}
+  function slot(idea){return stage?.querySelector('.pick[data-id="'+idea.id+'"] .ball')}
+  // A marble taken out of the jar hops from the jar's mouth back to its place on the shelf.
+  function flyHome(idea){
+    const home=slot(idea);if(!home||reduced.matches)return;
+    const S=stage.getBoundingClientRect(),to=home.getBoundingClientRect(),dx=mouth.x-(to.left-S.left+to.width/2),dy=mouth.y-(to.top-S.top+to.height/2);
+    home.animate([{transform:'translate('+dx+'px,'+dy+'px) scale(.6)',opacity:1},
+      {transform:'translate('+dx*.45+'px,'+(dy*.45-50)+'px) scale(.9)',opacity:1,offset:.55},{transform:'none',opacity:1}],{duration:620,easing:'cubic-bezier(.3,.1,.3,1)'});
+  }
+  function remountJar(entry){const box=stage.querySelector('.jar-marbles');box.replaceChildren();mountJar(box,entry)}
+  function enter(m){
+    const v=Body.getVelocity(m.body),s=mouth.s,r=jarRadius(state.picked.size+1);
+    const entry={x:clamp(75+(m.body.position.x-mouth.x)/s,41+r,109-r),velocity:cap({x:v.x/s,y:Math.max(2,v.y/s)},12),angle:m.body.angle,spin:Body.getAngularVelocity(m.body)};
+    removeLoose(m);state.picked.add(m.idea.id);save();remountJar(entry);refresh();celebrate(m.idea);
+    Track.send('add',{idea:m.idea.id,title:m.idea.title});
+  }
+  function celebrate(idea){
+    Sound.land();buzz(12);
+    const jar=stage.querySelector('.play-jar'),say=document.createElement('span');
+    say.className='jar-say';say.setAttribute('aria-hidden','true');
+    say.textContent=idea.title;jar.append(say);
+    if(reduced.matches){setTimeout(()=>say.remove(),1600)}
+    else{
+      jar.querySelector('.bottle-inner').animate([{transform:'none'},{transform:'translateY(3px) rotate(1.8deg)',offset:.2},{transform:'translateY(-2px) rotate(-1.1deg)',offset:.5},{transform:'none'}],{duration:460,delay:70});
+      say.animate([{opacity:0,translate:'0 8px',scale:'.9'},{opacity:1,translate:'0 0',scale:'1',offset:.15},{opacity:1,translate:'0 -6px',scale:'1',offset:.75},{opacity:0,translate:'0 -20px',scale:'1'}],{duration:1700,fill:'both'}).finished.then(()=>say.remove());
+    }
+    stage.querySelector('.play-live').textContent=idea.title+' — '+U.added;
+    if(state.picked.size===1)tell('out',U.hintTakeOut);else if(state.picked.size===3)tell('three',U.hintThree);
+  }
+  function collide(e){
+    for(const p of e.pairs){
+      const a=p.bodyA.plugin.marble,b=p.bodyB.plugin.marble,m=a||b;if(!m)continue;
+      const other=a?p.bodyB:p.bodyA,v=Body.getVelocity(m.body),o=other.isStatic?{x:0,y:0}:Body.getVelocity(other),power=Math.hypot(v.x-o.x,v.y-o.y);
+      Sound.clink(power,other.label==='rail'?.6:other.label==='wall'?.72:1);
+    }
+  }
+  function step(){
+    Engine.update(engine,STEP);
+    const gate=mouth.y+3*mouth.s;
+    for(const m of [...loose.values()]){
+      const {x,y}=m.body.position;
+      if(m.lastY<gate&&y>=gate&&x>mouth.left&&x<mouth.right){enter(m);continue}
+      m.lastY=y;m.age+=STEP;m.calm=Body.getSpeed(m.body)<.3?m.calm+STEP:0;
+      // Glass has a top speed here. Without it a marble that fell a long way jumps clean over the jar and dawdles back.
+      const v=Body.getVelocity(m.body),speed=Math.hypot(v.x,v.y);
+      if(speed>TOP_SPEED)Body.setVelocity(m.body,{x:v.x*TOP_SPEED/speed,y:v.y*TOP_SPEED/speed});
+      // Right over the mouth, sideways motion dies away and the marble drops in.
+      if(x>mouth.left&&x<mouth.right&&y>mouth.y-m.r-16)Body.setVelocity(m.body,{x:v.x*.86,y:Math.max(v.y,1.6)});
+      if(!Number.isFinite(x+y)){removeLoose(m);refresh();continue}
+      // Shrink to jar size on the way into the funnel, so the hand-over at the lip is invisible.
+      const target=jarRadius(state.picked.size+1)*mouth.s;
+      if(y>layout.funnelTop&&m.body.circleRadius>target+.1){const f=Math.max(target/m.body.circleRadius,.992);Body.scale(m.body,f,f);m.r=m.body.circleRadius}
+      if(m.calm>420){m.calm=0;m.nudges++;Body.setVelocity(m.body,{x:(x<mouth.x?1:-1)*(1.6+Math.random()),y:-1.4})}   // come to rest somewhere: nudge it on
+      if(m.age>9000||m.nudges>7||y>H+60)rescue(m);
+    }
+  }
+  // The promise behind "cannot fail": whatever happens, the marble ends up in the jar.
+  function rescue(m){
+    Body.setPosition(m.body,{x:mouth.x,y:mouth.y-2});Body.setVelocity(m.body,{x:0,y:2.5});m.lastY=mouth.y-2;enter(m);
+  }
+  function tick(now){
+    frame=0;if(!stage)return;
+    if(!sheet.open){acc+=last?Math.min(50,now-last):STEP;while(acc>=STEP&&loose.size){acc-=STEP;step()}}
+    last=now;
+    for(const m of loose.values())place(m.el,m.body.position.x,m.body.position.y,m.r0,m.body.angle,m.r/m.r0);
+    if(loose.size)frame=requestAnimationFrame(tick);
+  }
+  function run(){if(!frame){last=0;acc=0;frame=requestAnimationFrame(tick)}}
+
+  // ---------- touching a marble ----------
+  function bindPick(button){
+    const idea=byId(button.dataset.id);
+    button.onclick=e=>{if(e.detail===0)openIdea(idea)};       // keyboard: Enter or Space. Pointers are handled below.
+    button.onpointerdown=e=>{
+      if(e.button!==0)return;
+      Sound.wake();
+      const id=e.pointerId,sx=e.clientX,sy=e.clientY,free=!state.picked.has(idea.id)&&!loose.has(idea.id);
+      let drag=null;
+      try{button.setPointerCapture(id)}catch{}
+      const move=ev=>{
+        if(ev.pointerId!==id)return;
+        if(!drag){if(!free||Math.hypot(ev.clientX-sx,ev.clientY-sy)<7)return;drag=carry(idea,button,ev)}
+        drag.move(ev);
+      };
+      const end=ev=>{
+        if(ev.pointerId!==id)return;
+        for(const type of ['pointermove','pointerup','pointercancel','lostpointercapture'])button.removeEventListener(type,type==='pointermove'?move:end);
+        if(drag)drag.end(ev);else if(ev.type==='pointerup')openIdea(idea);
+      };
+      // lostpointercapture covers a finger or mouse let go outside the window: the marble is still released, never left hanging.
+      for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,end);
+      button.addEventListener('pointermove',move);
+    };
+  }
+  function grab(idea,button){
+    const S=stage.getBoundingClientRect(),b=button.querySelector('.ball').getBoundingClientRect(),r=b.width/2;
+    const origin={x:b.left-S.left+r,y:b.top-S.top+r},el=orb(idea,r);
+    place(el,origin.x,origin.y,r);button.classList.add('away');
+    return {S,r,origin,el};
+  }
+  // Carry the marble with your finger and let it go.
+  function carry(idea,button,e){
+    const {S,r,origin,el}=grab(idea,button),offset={x:origin.x-(e.clientX-S.left),y:origin.y-(e.clientY-S.top)};
+    let x=origin.x,y=origin.y,vx=0,vy=0,lx=e.clientX,ly=e.clientY,lt=e.timeStamp;
+    el.classList.add('held');
+    return {
+      move(ev){
+        const dt=Math.max(8,ev.timeStamp-lt);
+        vx=.4*vx+.6*(ev.clientX-lx)/dt;vy=.4*vy+.6*(ev.clientY-ly)/dt;lx=ev.clientX;ly=ev.clientY;lt=ev.timeStamp;
+        x=clamp(ev.clientX-S.left+offset.x,r,W-r);y=Math.min(ev.clientY-S.top+offset.y,layout.railY(x)-r-3);
+        place(el,x,y,r);
+      },
+      end(ev){
+        el.classList.remove('held');
+        if(ev.type==='pointercancel'){el.remove();button.classList.remove('away');return}
+        const resting=ev.timeStamp-lt>120;                       // the finger stopped before letting go: no throw, just a drop
+        spawn(idea,el,r,{x,y},resting?{x:0,y:0}:cap({x:vx*FRAME,y:vy*FRAME},13));
+      }
+    };
+  }
+  // The card's button, and a new marble of your own, go in without any dragging.
+  function autoAdd(idea){
+    if(state.picked.has(idea.id)||loose.has(idea.id))return;
+    if(reduced.matches){state.picked.add(idea.id);save();remountJar();refresh();celebrate(idea);Track.send('add',{idea:idea.id,title:idea.title});return}
+    const S=stage.getBoundingClientRect(),home=slot(idea)?.getBoundingClientRect();
+    if(home){const r=home.width/2;return spawn(idea,orb(idea,r),r,{x:home.left-S.left+r,y:home.top-S.top+r},{x:(Math.random()-.5)*2.4,y:-2.2})}
+    // No place on the shelf (your own marble, or one from another problem): it appears above the run.
+    const shelves=stage.querySelector('.play-shelves').getBoundingClientRect(),r=21;
+    const m=spawn(idea,orb(idea,r),r,{x:W/2+(Math.random()-.5)*W*.5,y:shelves.bottom-S.top+4},{x:(Math.random()-.5)*2,y:-1.5});
+    m.el.animate([{opacity:0,scale:'.3'},{opacity:1,scale:'1'}],{duration:260,easing:'cubic-bezier(.2,.9,.3,1.2)'});
+  }
+
+  // ---------- sheets: an idea card, your own marble, the jar ----------
+  let reading_card=null;                              // the card that is open right now, and since when
+  function closeCard(){if(!reading_card)return;Track.send('read',{idea:reading_card.id,title:reading_card.title,ms:Math.round(performance.now()-reading_card.since)});reading_card=null}
+  function openIdea(idea){
+    state.read.add(idea.id);save();refresh();
+    closeCard();reading_card={id:idea.id,title:idea.title,since:performance.now()};Track.send('open',{idea:idea.id,title:idea.title});
+    const inJar=state.picked.has(idea.id);
+    const body=idea.own?(idea.note?'<p class="own-note">'+esc(idea.note)+'</p>':''):cardSections(idea);
+    openSheet('<div class="detail">'+ball(idea)+'<p class="cat">'+esc(idea.group.title)+(idea.own?' · '+esc(U.ownTag):'')+'</p><h2>'+esc(idea.title)+'</h2>'+body+
+      '<button class="primary" data-card="'+(inJar?'out':'in')+'">'+esc(inJar?U.takeOut:U.dropIn)+'</button></div>');
+    detail.querySelector('[data-card]').onclick=()=>{sheet.close();inJar?takeOut(idea):autoAdd(idea)};
+  }
+  function takeOut(idea){
+    state.picked.delete(idea.id);jarRelease(idea.id);
+    if(idea.own){ideas.splice(ideas.indexOf(idea),1);state.own.splice(state.own.indexOf(idea),1)}
+    save();remountJar();refresh();if(!idea.own)flyHome(idea);
+    Track.send('remove',{idea:idea.id,title:idea.title});
+  }
+  function openOwn(){
+    if(state.own.length>=5)return hint(U.ownFull,6000);
+    openSheet('<form class="detail own-form" novalidate><span class="ball own" aria-hidden="true"></span><h2>'+esc(U.ownTitle)+'</h2><p>'+esc(U.ownIntro)+'</p>'+
+      '<label>'+esc(U.ownName)+'<input name="title" maxlength="60" required autocomplete="off"></label>'+
+      '<label>'+esc(U.ownNote)+'<textarea name="note" rows="3" maxlength="280"></textarea></label>'+
+      '<label>'+esc(U.ownArea)+'<select name="g">'+groups.map((g,k)=>'<option value="'+k+'"'+(k===state.area?' selected':'')+'>'+esc(g.title)+'</option>').join('')+'</select></label>'+
+      '<button class="primary">'+esc(U.ownMake)+'</button></form>');
+    const form=detail.querySelector('form');
+    form.onsubmit=e=>{
+      e.preventDefault();
+      const title=form.title.value.trim().replace(/\s+/g,' ');
+      if(!title){form.title.focus();return}
+      const idea=addOwnIdea({id:'own-'+Date.now().toString(36),title,note:form.note.value.trim(),g:+form.g.value});
+      Track.send('own',{idea:idea.id,title:idea.title,note:idea.note});
+      save();sheet.close();autoAdd(idea);
+    };
+    form.title.focus();
+  }
+  // Tapping the jar shows what is in it. Sending is its own, shorter step.
+  function openJar(){
+    const picked=[...state.picked].map(byId),{text,counts}=reading();
+    if(!picked.length)return openSheet('<div class="detail jar-detail"><h2>'+esc(jarTitle())+'</h2><p>'+esc(U.emptyHint)+'</p></div>');
+    openSheet('<div class="detail jar-detail"><h2>'+esc(jarTitle())+'</h2><p class="reading">'+esc(text)+'</p>'+
+      '<div class="mix" aria-hidden="true">'+counts.map(c=>'<i style="flex:'+c.n+';background:'+c.tint+'"></i>').join('')+'</div>'+
+      picked.map(i=>'<div class="item">'+ball(i)+'<span>'+esc(i.title)+(i.own?' <em>'+esc(U.ownTag)+'</em>':'')+'</span><button data-remove="'+esc(i.id)+'">'+esc(U.takeOutShort)+'</button></div>').join('')+
+      '<button class="primary jar-go">'+esc(U.send)+'</button></div>');
+    for(const b of detail.querySelectorAll('[data-remove]'))b.onclick=()=>{takeOut(byId(b.dataset.remove));openJar()};
+    detail.querySelector('.jar-go').onclick=openSend;
+  }
+  // One field and one button. A note is optional and tucked away; the name is only asked for if the first page did not get one.
+  function openSend(){
+    if(!state.picked.size)return openJar();
+    const sealed=state.sent===signature(),booking=window.IDEA_MAP.send?.bookingUrl,count=state.picked.size;
+    openSheet('<form class="detail send-form" novalidate><h2>'+esc(U.sendTitle)+'</h2>'+
+      '<p class="send-summary">'+esc(fill(count===1?U.sendCountOne:U.sendCount,{n:count}))+' '+esc(reading().text)+'</p>'+
+      (state.fullName?'':'<label>'+esc(U.sendName)+'<input name="name" autocomplete="name" maxlength="80"></label>')+
+      '<label>'+esc(U.sendEmail)+'<input name="email" type="email" inputmode="email" autocomplete="email" maxlength="200" value="'+esc(state.email)+'"></label>'+
+      '<details class="send-note"><summary>'+esc(U.sendNoteToggle)+'</summary><textarea name="note" rows="3" maxlength="800" aria-label="'+esc(U.sendNote)+'"></textarea></details>'+
+      '<label class="hp" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>'+
+      '<button class="primary">'+esc(sealed?U.sendAgain:U.sendButton)+'</button>'+
+      (booking?'<p class="send-or">'+esc(U.sendOr)+'</p><button type="button" class="coffee">'+esc(U.coffee)+'</button><p class="coffee-hint">'+esc(U.coffeeHint)+'</p>':'')+
+      '<p class="send-status" role="status">'+(sealed?esc(U.sendDone):'')+'</p><p class="fine">'+esc(U.sendPrivacy)+'</p></form>');
+    const form=detail.querySelector('form');
+    form.onsubmit=e=>{e.preventDefault();send(form,false)};
+    form.email.oninput=()=>{form.querySelector('.send-status').textContent=''};
+    const coffee=form.querySelector('.coffee');
+    if(coffee)coffee.onclick=()=>{
+      // Open the calendar straight away, inside the click, or the browser blocks it as a pop-up. The jar follows in the background.
+      window.open(booking,'_blank','noopener');send(form,true);
+    };
+    if(!sealed)form.email.focus({preventScroll:true});
+  }
+  async function send(form,coffee){
+    const status=form.querySelector('.send-status'),button=form.querySelector('.primary'),email=form.email.value.trim(),name=form.name?.value.trim().replace(/\s+/g,' ');
+    const valid=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    // Over coffee the calendar asks for the email itself, so here it is optional. A plain send needs one to get a reply.
+    if(!valid&&(!coffee||email)){status.textContent=U.sendNeedEmail;form.email.focus();return}
+    if(name){state.fullName=name;state.name=name.split(' ')[0]}
+    if(valid)state.email=email;
+    save();refresh();
+    const picked=[...state.picked].map(byId),note=form.note.value.trim();
+    const payload={visitor:Track.visitor,name:state.fullName,email:valid?email:'',note,coffee,reading:reading().text,website:form.website.value,
+      ideas:picked.filter(i=>!i.own).map(i=>({id:i.id,title:i.title,problem:i.group.title})),
+      own:picked.filter(i=>i.own).map(i=>({title:i.title,note:i.note,problem:i.group.title}))};
+    const endpoint=window.IDEA_MAP.send?.endpoint;
+    button.disabled=true;status.textContent=U.sending;
+    try{
+      if(!endpoint||location.protocol==='file:')throw new Error('no backend here');
+      const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(!response.ok)throw new Error('refused');
+      state.sent=signature();save();refresh();
+      status.textContent=coffee?U.coffeeDone:U.sendDone;button.textContent=U.sendAgain;Sound.land();
+    }catch{
+      // No backend, or it is down: the visitor can still get their jar to Mareike by hand.
+      status.textContent=U.sendFailed;
+      if(!form.querySelector('.copy-jar')){
+        const copy=document.createElement('button');copy.type='button';copy.className='subtle copy-jar';copy.textContent=U.copy;
+        copy.onclick=async()=>{
+          try{await navigator.clipboard.writeText(jarText(note));copy.textContent=U.copied}
+          catch{const area=document.createElement('textarea');area.value=jarText(note);area.rows=6;area.setAttribute('aria-label',U.copyFallback);copy.replaceWith(area);area.select()}
+        };
+        status.after(copy);
+      }
+    }
+    button.disabled=false;
+  }
+
+  // ---------- start and stop ----------
+  function tools(){
+    const nav=document.querySelector('#mastTools');
+    nav.innerHTML='<button class="tool replay" title="'+esc(U.restart)+'" aria-label="'+esc(U.restart)+'">↺</button><button class="tool sound" aria-pressed="'+Sound.on+'">♪</button>';
+    const sound=nav.querySelector('.sound');
+    const label=()=>{sound.setAttribute('aria-pressed',Sound.on);sound.setAttribute('aria-label',Sound.on?U.soundOn:U.soundOff);sound.title=Sound.on?U.soundOn:U.soundOff};
+    sound.onclick=()=>{Sound.toggle();label()};label();
+    nav.querySelector('.replay').onclick=()=>go(0);
+  }
+  function mount(){
+    unmount();
+    app.innerHTML='<section class="world play"><div class="play-stage">'+
+      '<header class="play-head"><div class="area-row"><p class="area-kicker"></p>'+
+      '<button class="area-step" data-step="-1" aria-label="'+esc(U.areaPrev)+'">‹</button><button class="area-step" data-step="1" aria-label="'+esc(U.areaNext)+'">›</button></div>'+
+      '<h1 tabindex="-1"></h1>'+
+      '<nav class="areas">'+groups.map((g,k)=>'<button class="area-dot" data-area="'+k+'" style="--tint:'+g.tint+'"><i></i></button>').join('')+'</nav>'+
+      '<p class="play-hint"></p></header>'+
+      '<div class="play-shelves"></div>'+
+      '<svg class="play-art" aria-hidden="true"></svg>'+
+      '<button class="play-jar"><span class="bottle" aria-hidden="true"><span class="bottle-inner"><span class="bottle-scale">'+bottleArt+'</span><span class="cork"></span></span></span>'+
+      '<span class="jar-label"><span class="jar-name"></span><span class="jar-count">0</span></span><span class="jar-open">'+esc(U.jarOpen)+'</span></button>'+
+      '<button class="own-add"><span class="ball own" aria-hidden="true"></span><span>'+esc(U.ownAdd)+'</span></button>'+
+      '<button class="send-jar primary" hidden></button>'+
+      '<div class="play-loose"></div><p class="play-live" aria-live="polite"></p></div></section>';
+    stage=app.querySelector('.play-stage');art=stage.querySelector('.play-art');
+    engine=Engine.create({gravity:{x:0,y:GRAVITY},positionIterations:8});statics=[];
+    Events.on(engine,'collisionStart',collide);
+    renderArea();remountJar();layout();refresh();hint(U.hintDrop,0);tools();
+    Track.send('game');
+    for(const dot of stage.querySelectorAll('.area-dot'))dot.onclick=()=>setArea(+dot.dataset.area);
+    for(const b of stage.querySelectorAll('.area-step'))b.onclick=()=>setArea(state.area+ +b.dataset.step);
+    stage.querySelector('.play-jar').onclick=openJar;
+    stage.querySelector('.send-jar').onclick=openSend;
+    stage.querySelector('.own-add').onclick=()=>{Sound.wake();openOwn()};
+    // Swiping sideways on the title moves between areas.
+    const head=stage.querySelector('.play-head');let startX=null;
+    head.onpointerdown=e=>{startX=e.target.closest('button')?null:e.clientX};
+    head.onpointerup=e=>{if(startX===null)return;const d=e.clientX-startX;startX=null;if(Math.abs(d)>45)setArea(state.area+(d<0?1:-1))};
+  }
+  function unmount(){
+    if(!stage)return;
+    cancelAnimationFrame(frame);frame=0;clearTimeout(hintTimer);loose.clear();stage=null;engine=null;
+    document.querySelector('#mastTools').innerHTML='';
+  }
+  sheet.addEventListener('close',closeCard);
+  window.addEventListener('pagehide',closeCard);
+  window.addEventListener('resize',()=>{if(!stage)return;for(const m of [...loose.values()])rescue(m);layout()});
+  return {mount,unmount,_test:{loose,get mouth(){return mouth},get size(){return {W,H}},autoAdd,reading}};
+})();
