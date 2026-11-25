@@ -334,14 +334,25 @@ const Play=(()=>{
     form.title.focus();
   }
   // Tapping the jar shows what is in it. Sending is its own, shorter step.
+  // A card opened from the jar: a tap on the left third of the screen goes back to the jar, like stepping back
+  // through stories. Buttons and links keep their own job.
+  let backToJar=false;
+  sheet.addEventListener('click',e=>{
+    if(!backToJar||e.clientX>innerWidth/3||e.target.closest('button,a,input,textarea,select,summary'))return;
+    e.stopImmediatePropagation();openJar();
+  },true);
+  sheet.addEventListener('close',()=>{backToJar=false});
   function openJar(){
+    backToJar=false;closeCard();
     const picked=[...state.picked].map(byId),{text,counts}=reading();
     if(!picked.length)return openSheet('<div class="detail jar-detail"><h2>'+esc(jarTitle())+'</h2><p>'+esc(U.emptyHint)+'</p></div>');
     openSheet('<div class="detail jar-detail"><h2>'+esc(jarTitle())+'</h2><p class="reading">'+esc(text)+'</p>'+
       '<div class="mix" aria-hidden="true">'+counts.map(c=>'<i style="flex:'+c.n+';background:'+c.tint+'"></i>').join('')+'</div>'+
-      picked.map(i=>'<div class="item">'+ball(i)+'<span>'+esc(i.title)+(i.own?' <em>'+esc(U.ownTag)+'</em>':'')+'</span><button data-remove="'+esc(i.id)+'">'+esc(U.takeOutShort)+'</button></div>').join('')+
+      picked.map(i=>'<div class="item"><button class="open-idea" data-open="'+esc(i.id)+'">'+ball(i)+'<span>'+esc(i.title)+(i.own?' <em>'+esc(U.ownTag)+'</em>':'')+'</span></button><button data-remove="'+esc(i.id)+'">'+esc(U.takeOutShort)+'</button></div>').join('')+
       '<button class="primary jar-go">'+esc(U.send)+'</button></div>');
     for(const b of detail.querySelectorAll('[data-remove]'))b.onclick=()=>{takeOut(byId(b.dataset.remove));openJar()};
+    // A marble in the jar opens its idea card again, the same card as on the shelf.
+    for(const b of detail.querySelectorAll('[data-open]'))b.onclick=()=>{openIdea(byId(b.dataset.open));backToJar=true};
     detail.querySelector('.jar-go').onclick=openSend;
   }
   // One field and one button. A note is optional and tucked away; the name is only asked for if the first page did not get one.
@@ -458,10 +469,16 @@ const Play=(()=>{
     stage.querySelector('.play-jar').onclick=openJar;
     stage.querySelector('.send-jar').onclick=openSend;
     stage.querySelector('.own-add').onclick=()=>{Sound.wake();openOwn()};
-    // Swiping sideways on the title moves between areas.
-    const head=stage.querySelector('.play-head');let startX=null;
-    head.onpointerdown=e=>{startX=e.target.closest('button')?null:e.clientX};
-    head.onpointerup=e=>{if(startX===null)return;const d=e.clientX-startX;startX=null;if(Math.abs(d)>45)setArea(state.area+(d<0?1:-1))};
+    // Swiping sideways anywhere on the page moves between areas. A swipe that starts on a marble or a button stays
+    // theirs (dragging a marble off the shelf), and a mostly vertical stroke is not a swipe.
+    let swipe=null;
+    stage.onpointerdown=e=>{swipe=e.isPrimary&&!e.target.closest('button,a,input,textarea,select')?{id:e.pointerId,x:e.clientX,y:e.clientY}:null};
+    stage.onpointerup=e=>{
+      if(!swipe||e.pointerId!==swipe.id)return;
+      const dx=e.clientX-swipe.x,dy=e.clientY-swipe.y;swipe=null;
+      if(Math.abs(dx)>45&&Math.abs(dx)>1.5*Math.abs(dy))setArea(state.area+(dx<0?1:-1));
+    };
+    stage.onpointercancel=()=>{swipe=null};
   }
   function unmount(){
     if(state.step!==12){asked=false;try{sessionStorage.removeItem('idea-map-asked');sessionStorage.removeItem('idea-map-reached')}catch{}}   // leaving for the story: ask again next time
