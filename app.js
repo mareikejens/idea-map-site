@@ -1,7 +1,15 @@
 'use strict';
 const {welcome:W,about:A,story:S,ui:U,groups}=window.IDEA_MAP;
 document.querySelector('.mast .face').setAttribute('aria-label',A.open);
-document.querySelector("#siteTitle").textContent=W.siteTitle;
+// Header: who, then what. On a phone the two stack (see .mast-who in style.css).
+{
+  const title=document.querySelector("#siteTitle");
+  for(const [cls,text] of [['mast-who',A.name],['mast-dot','·'],['mast-what',W.siteTitle]]){
+    const part=document.createElement('span');part.className=cls;part.textContent=text;
+    if(cls==='mast-dot')part.setAttribute('aria-hidden','true');
+    title.append(part);
+  }
+}
 const ideas=groups.flatMap((group,g)=>group.ideas.map((i,index)=>({...i,g,group,shade:index%6})));
 const app=document.querySelector('#app'),sheet=document.querySelector('#sheet'),detail=document.querySelector('#detail');
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
@@ -32,7 +40,11 @@ function ball(idea){return idea.own?'<span aria-hidden="true" class="ball own"><
 function btn(key,label,cls='action'){return '<button class="'+cls+'" data-action="'+key+'">'+esc(label)+'</button>'}
 function named(v){return v.replace('{name}',()=>state.name)}
 const jarTitle=()=>state.name?named(U.personalJar):U.jar;
-function controls(label=U.next,withPause=false){return '<nav class="controls">'+btn('back',U.back,'subtle')+(withPause?btn('pause',U.pause,'pause'):'')+btn('next',label,'keyboard-next')+'</nav>'}
+// Story controls. "Skip to the ideas" is there for visitors in a hurry.
+function controls(label=U.next,withPause=false){
+  const early=state.step>=1&&state.step<10;
+  return '<nav class="controls">'+btn('back',U.back,'subtle')+(early?btn('skip',U.skip,'subtle skip'):'')+(withPause?btn('pause',U.pause,'pause'):'')+btn('next',label,'keyboard-next')+'</nav>';
+}
 let raf=0;
 function animate(duration,paint,done){
   cancelAnimationFrame(raf);let elapsed=0,last=0;
@@ -69,7 +81,7 @@ function machine(stage,step){
   // A scene left early hands its marble over: for half a second the pose glides from where it was to where it belongs.
   const joinSpan=f0?0:MarbleRun.clamp(520/duration);
   // "I am." and the marble goes: only a breath at the brink while the words change, then it races down the drop.
-  const hold=step===3&&!f0?400:0;
+  const hold=step===3&&!f0?700:0;
   lastScene=step;
   // f is the place in the scene's choreography, u the plain time since the scene began (both 0 to 1).
   function paint(f,u){
@@ -118,7 +130,11 @@ function machine(stage,step){
     const height=width*rect.height/Math.max(1,rect.width);
     if(step===0){
       const field=app.querySelector('#visitor').getBoundingClientRect();
-      const dockX=field.right-rect.left-22,dockY=field.top-rect.top+field.height/2;
+      let dockX=field.right-rect.left-22,dockY=field.top-rect.top+field.height/2;
+      // On a phone the field stands clear above the run and the marble waits on the rail just past its end.
+      // (The rail's top edge is about 16 drawing units below the marble's centre. The rail climbs to the left by
+      // .055 per unit, so the gap is measured at the field's left end, where the rail is highest.)
+      if(mobile){const px=rect.width/width;dockX=field.right-rect.left+8+19*px;dockY=field.bottom-rect.top+7+.055*(field.width+30)-16*px}
       cx=-240-(dockX/rect.width-.5)*width;
       cy=(MarbleRun.ground(-240)-25)-(dockY/rect.height-.5)*height;
     }
@@ -183,7 +199,7 @@ function dockPortrait(from){
 }
 function about(){
   const logos=[['kit.png','KIT',1.2],['ibm.svg','IBM',1],['bcg.png','BCG',1],['optiml.png','Optiml',1.15],['eth.png','ETH Zürich',.88]];
-  openSheet('<div class="detail about"><img class="portrait" src="assets/mareike.jpg" alt=""><h2>'+esc(A.name)+'</h2><p>'+esc(A.lead)+'</p><p>'+esc(A.body)+'</p><p class="small">'+esc(A.background)+'</p><ul class="logos" aria-label="'+esc(A.logosLabel)+'">'+logos.map(([file,name,h])=>'<li><img src="assets/logos/'+file+'" alt="'+name+'" style="height:'+h+'em"></li>').join('')+'</ul><p class="links"><a href="https://www.linkedin.com/in/mareike-jens/" target="_blank" rel="noopener">LinkedIn</a><a href="https://mareikejens.substack.com/" target="_blank" rel="noopener">Substack</a><a href="https://mareikejens.com" target="_blank" rel="noopener">mareikejens.com</a></p></div>');
+  openSheet('<div class="detail about"><img class="portrait" src="assets/mareike.jpg" alt=""><h2>'+esc(A.name)+'</h2><p>'+esc(A.lead)+'</p><p>'+esc(A.body)+'</p><p class="small">'+esc(A.background)+'</p><ul class="logos" aria-label="'+esc(A.logosLabel)+'">'+logos.map(([file,name,h])=>'<li><img src="assets/logos/'+file+'" alt="'+name+'" style="height:'+h+'em"></li>').join('')+'</ul><p class="links"><a href="https://www.linkedin.com/in/mareike-jens/" target="_blank" rel="noopener">LinkedIn</a><a href="https://mareikejens.substack.com/" target="_blank" rel="noopener">Substack</a>'+(A.email?'<a href="mailto:'+esc(A.email)+'">'+esc(A.emailLabel)+'</a>':'')+(window.IDEA_MAP.send?.bookingUrl?'<a href="'+esc(window.IDEA_MAP.send.bookingUrl)+'" target="_blank" rel="noopener">'+esc(A.bookLabel)+'</a>':'')+'</p></div>');
 }
 document.addEventListener('click',e=>{if(e.target.closest('[data-about]'))about()});
 function runWords(label){
@@ -204,7 +220,7 @@ function story(){
   const title=group?runWords(group.runLabel):s===2?worried:esc([null,S.intro,null,null,S.even,S.transition][s]);
   const body=s===1?S.introBody:group?.question;
   const kind=group?'station':s<=2?'opening':'';
-  // The first danger is posed as a question: "I am." comes first while the marble races down the drop, "What if…" joins it, and the answer appears as the marble bursts.
+  // The first danger is posed as a question: "I am." stands alone while the marble races down the drop, "What if…" then takes its place, and the answer appears as the marble bursts.
   // "I am." answers the question from the scene before, then the first danger follows.
   const lead=s===3?'<span class="iam">'+esc(S.iAm)+'</span><span class="whatif">'+esc(S.whatIf)+'</span> ':'';
   const head='<h1 tabindex="-1" class="'+(s===2?'worry':'')+'">'+lead+(lead?'<span class="answer">'+title+'</span>':title)+'</h1>'+(body?'<p>'+lateWords(body)+'</p>':'');
@@ -378,7 +394,7 @@ function go(n,after){
 }
 function openSheet(html){detail.innerHTML=html;const x=sheet.querySelector('.x');x.textContent='×';x.setAttribute('aria-label',U.close);if(!sheet.open)sheet.showModal();sheet.scrollTop=0}
 function cardSections(idea){
-  const fields=[['vision','Vision'],['why','Why'],['question','Key question']];
+  const fields=[['vision','Vision'],['why','Why'],['question','Let’s discuss']];
   const clean=key=>idea[key].replace(/\s*\((?:draft|guess)(?::[^)]*)?\)\s*$/,'');
   // The scene is a picture: assets/scenes/<idea id>.jpg. Its words stay as the alt text for screen readers.
   // If the picture is missing, the figure marks itself "missing" and the stylesheet shows the words instead.
@@ -398,6 +414,10 @@ app.onclick=e=>{
     case'next':go(state.step+1);break;
     case'back':go(state.step-1);break;
     case'restart':go(0);break;
+    case'skip':
+      // Two scenes hold back a second line until the next tap. Mark them as shown so the jump goes straight through.
+      app.querySelector('.held')?.classList.add('shown');app.querySelector('.flood')?.classList.add('asked');
+      go(12);break;
     case'pause':state.paused=!state.paused;b.textContent=state.paused?U.resume:U.pause;b.setAttribute('aria-pressed',state.paused);break;
   }
 };
@@ -407,4 +427,6 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'||e.key===' '||e.key==='ArrowRight'){e.preventDefault();go(state.step+1)}
 });
 // ?skip jumps straight to the game, for reviewing it without replaying the story.
-go(new URLSearchParams(location.search).has('skip')?12:new URLSearchParams(location.search).has('flood')?10:0);
+// A visitor who already reached the ideas in this tab lands there again after a reload, instead of at the welcome screen.
+let reached=false;try{reached=sessionStorage.getItem('idea-map-reached')==='yes'&&!!state.fullName}catch{}
+go(new URLSearchParams(location.search).has('skip')||reached?12:new URLSearchParams(location.search).has('flood')?10:0);

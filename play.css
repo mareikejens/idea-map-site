@@ -6,7 +6,7 @@
 .play .play-head{display:block;padding:10px 18px 0;position:relative;z-index:2}
 .area-row{display:flex;align-items:center;gap:2px;height:36px}
 .play .area-kicker{margin:0 auto 0 0;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:color-mix(in srgb,var(--tint) 62%,#3b342c);transition:color .4s}
-.area-step{width:40px;height:40px;margin-right:-8px;border-radius:50%;font-size:25px;line-height:1;color:#8a7e70;transition:color .2s,background .2s}
+.area-step{width:40px;height:40px;margin-right:-8px;border-radius:50%;font-size:25px;line-height:1;color:var(--ink);transition:color .2s,background .2s}
 .area-step:hover,.area-step:active{color:var(--ink);background:#efe6d9}
 .play .play-head h1{font-size:clamp(25px,7vw,31px);max-width:none;margin-top:0;line-height:1.1;letter-spacing:-.03em}
 .areas{display:flex;gap:5px;margin-top:10px}
@@ -28,7 +28,7 @@
 .play .pick .ball{--diam:inherit;width:var(--diam);height:var(--diam);transition:opacity .35s,translate .24s var(--motion-ease)}
 .play .pick-name{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;hyphens:auto;color:var(--ink);transition:color .35s}
 .play .pick.selected .ball{opacity:.14}
-.play .pick.selected .pick-name{color:#a59a8c}
+.play .pick.selected .pick-name{color:var(--ink)}
 .play .pick.away .ball{opacity:0;transition:none}
 .play .pick:active{cursor:grabbing}
 
@@ -45,7 +45,7 @@
 .play .bottle{display:block;position:relative;width:calc(150px*var(--jar-scale));height:calc(196px*var(--jar-scale));filter:drop-shadow(0 7px 6px #846d4c24)}
 .play .bottle-scale{transform:scale(var(--jar-scale))}
 .jar-label{display:flex;align-items:center;gap:7px;font:400 15px/1.2 "Crete Round",Georgia,serif;white-space:nowrap;color:var(--ink)}
-.jar-count{min-width:22px;height:22px;padding:0 6px;border-radius:11px;display:grid;place-items:center;font:600 12.5px/1 "Average Sans",Arial,sans-serif;font-variant-numeric:tabular-nums;background:#e9dfd0;color:#5d5348;transition:background .3s,color .3s}
+.jar-count{min-width:22px;height:22px;padding:0 6px;border-radius:11px;display:grid;place-items:center;font:600 12.5px/1 "Average Sans",Arial,sans-serif;font-variant-numeric:tabular-nums;background:#e9dfd0;color:var(--ink);transition:background .3s,color .3s}
 .play-jar.filled .jar-count{background:var(--ink);color:#fff}
 .jar-open{font-size:11.5px;color:var(--muted);opacity:0;transition:opacity .4s}
 .play-jar.filled .jar-open{opacity:1}
@@ -91,7 +91,7 @@
 .hp{position:absolute!important;left:-9999px;width:1px;height:1px;overflow:hidden}
 .jar-detail .reading{font:400 18px/1.3 "Crete Round",Georgia,serif;margin:0 0 12px}
 .mix{display:flex;gap:2px;height:8px;border-radius:5px;overflow:hidden;margin-bottom:8px}
-.item em{font-style:normal;font-size:11.5px;padding:2px 7px;border-radius:9px;background:#ece3d5;color:#6d6257;margin-left:6px;white-space:nowrap}
+.item em{font-style:normal;font-size:11.5px;padding:2px 7px;border-radius:9px;background:#ece3d5;color:var(--ink);margin-left:6px;white-space:nowrap}
 .item span{min-width:0}
 .item button{color:var(--muted);text-decoration:underline;text-decoration-color:#c9bdac;text-underline-offset:4px;white-space:nowrap}
 
@@ -107,4 +107,26 @@
 .coffee{width:100%;min-height:46px;padding:11px 24px;border-radius:30px;border:1.5px solid #292b2d;color:#292b2d;background:transparent;font-size:inherit}
 .coffee-hint{margin:8px 0 0!important;text-align:center;font-size:12.5px;color:var(--muted)}
 .jar-go{width:100%;margin-top:22px}
-.visit-notice{margin:12px 0 0;font-size:12.5px;line-height:1.35;color:#7b7166;max-width:310px;pointer-events:auto}
+.visit-notice{margin:12px 0 0;font-size:12.5px;line-height:1.35;color:var(--ink);max-width:310px;pointer-events:auto}
+
+/* the little intro before the game */
+.world.play.ask{overflow:auto}
+.ask-stage{width:min(100vw,460px);margin:0 auto;padding:clamp(18px,5vh,44px) 18px 24px}
+.play.ask h1{font-size:clamp(27px,7.6vw,34px);line-height:1.1;letter-spacing:-.03em;max-width:none}
+.ask-body{margin:10px 0 0;color:var(--muted)}
+.ask-list{display:grid;gap:8px;margin-top:22px}
+.ask-row{display:flex;align-items:center;gap:14px;width:100%;min-height:62px;padding:9px 14px;border-radius:18px;text-align:left;background:#fffdf9;
+  box-shadow:0 1px 0 #fff inset,0 4px 12px -7px #6e553766,0 0 0 1px #ebe1d3;transition:translate .2s var(--motion-ease),box-shadow .2s;-webkit-tap-highlight-color:transparent}
+.ask-row:hover,.ask-row:active{translate:0 -2px;box-shadow:0 1px 0 #fff inset,0 9px 16px -9px #6e553780,0 0 0 1px #e2d6c5}
+.ask-row .ball{--diam:38px}
+.ask-text{flex:1;min-width:0;display:grid;gap:2px}
+.ask-text b{font:400 17.5px/1.2 "Crete Round",Georgia,serif;color:var(--ink)}
+.ask-text small{font-size:12.5px;color:var(--muted)}
+.ask-row i{font-style:normal;font-size:22px;color:var(--ink)}
+
+/* the card's button stays in reach however long the card is */
+.detail>.primary[data-card]{position:sticky;bottom:0;z-index:2;width:100%;margin-top:8px;box-shadow:0 36px 0 36px #f8f3ec,0 -10px 16px 8px #f8f3ecee}
+
+/* story: a way past the story */
+.controls .skip{color:var(--muted)}
+.ask-nav{margin-top:22px}

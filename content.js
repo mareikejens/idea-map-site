@@ -10,10 +10,13 @@ window.IDEA_MAP = {
   "about": {
     "open": "About Mareike",
     "name": "Mareike Jens",
-    "lead": "I’m committed to making the AI transition go well.\nThis marble run is my map: the problems I care about, and the ideas I’d like to explore with you.",
+    "lead": "I’m committed to making the AI transition go well. This marble run is my map: the problems I care about, and the ideas I’d like to explore with you.",
     "body": "Which ideas do you want to talk about? Fill your marble jar and let’s discuss over coffee!",
     "background": "Based in Zürich. Building something new after 14 years across Strategy × Tech × Ops.",
-    "logosLabel": "Where I’ve worked and studied"
+    "logosLabel": "Where I’ve worked and studied",
+    "emailLabel": "Email",
+    "email": "mareike.jens@gmail.com",
+    "bookLabel": "Book a meeting"
   },
   "story": {
     "intro": "Transformative AI is coming.",
@@ -25,7 +28,7 @@ window.IDEA_MAP = {
     "iAm": "I am.",
     "whatIf": "What if…",
     "even": "But even if we keep control…",
-    "transition": "…we still have to navigate the transition.",
+    "transition": "…we still have to navigate the AI transition.",
     "swarm": "All my ideas start with one question.",
     "swarmBody": "How do we safely navigate society’s AI transformation?",
     "named": "Here are {count} I’d like to explore.",
@@ -35,6 +38,7 @@ window.IDEA_MAP = {
   "ui": {
     "next": "Continue",
     "back": "Back",
+    "skip": "Skip to the ideas",
     "turn": "Turn the track",
     "reveal": "See the ideas",
     "sort": "See the shelves",
@@ -61,6 +65,12 @@ window.IDEA_MAP = {
     "soundOn": "Sound on",
     "soundOff": "Sound off",
     "hintDrop": "Tap a marble to read it. Drag it off the shelf to drop it in.",
+    "askTitle": "What would you like to talk about?",
+    "askTitleNamed": "{name}, what would you like to talk about?",
+    "askBody": "Pick where to start. You can visit the others too.",
+    "askIdeas": "{n} ideas",
+    "askOther": "Something else",
+    "askOtherHint": "Add your own idea",
     "hintTakeOut": "Changed your mind? Tap the jar to take a marble out.",
     "areaOf": "Problem {n} of {total}",
     "areaRead": "{read} of {total} ideas read",
@@ -109,15 +119,15 @@ window.IDEA_MAP = {
   "send": {
     "endpoint": "",
     "trackEndpoint": "",
-    "bookingUrl": ""
+    "bookingUrl": "https://calendar.app.google/XiNTk9uyT7pgJknx9"
   },
   "groups": [
     {
       "id": "control",
       "title": "We lose control",
-      "runLabel": "We lose [control]",
+      "runLabel": "We lose [control].",
       "tint": "#8643cb",
-      "question": "",
+      "question": "What happens when AI acts faster than humans can check it?",
       "openSlots": 0,
       "ideas": [
         {
@@ -138,7 +148,7 @@ window.IDEA_MAP = {
         },
         {
           "id": "control-3",
-          "title": "Private AI Hardware",
+          "title": "Private AI hardware",
           "scene": "A ring on a hand on a walk, someone speaking a thought. At home a plain markdown file appears in a notes folder. No cloud logo anywhere.",
           "vision": "Consumers own their intelligence: local, on their device, in files they can take anywhere, with any model.",
           "why": "Context, memory and permissions are what agents run on, and whoever holds them holds the power. If people keep them on their own device, in plain files, no platform can hold them hostage.",
@@ -162,7 +172,7 @@ window.IDEA_MAP = {
         },
         {
           "id": "control-6",
-          "title": "Cybersecurity for critical infrastructure",
+          "title": "Cyber for the public",
           "scene": "A control room at a regional water utility at 3 am. One screen shows a single alert: \"unusual commands, matches an AI-written attack\". An operator's hand rests on a physical switch. (draft)",
           "vision": "Power grids, hospitals and water systems cannot be taken down by one person with a laptop and an AI. (draft)",
           "why": "AI makes attacks on the systems society depends on cheaper, and a failure in one grid or hospital reaches everyone. Attack capability is rising faster than defenders can adapt. (draft)",
@@ -173,14 +183,14 @@ window.IDEA_MAP = {
     {
       "id": "connection",
       "title": "We lack human connection",
-      "runLabel": "We will lack human [connection]",
+      "runLabel": "We will lack human [connection].",
       "tint": "#079f92",
       "question": "Who do we turn to when we talk to machines more often than to one another?",
       "openSlots": 0,
       "ideas": [
         {
           "id": "connection-1",
-          "title": "You Should Meet",
+          "title": "You should meet",
           "scene": "A phone showing one message: \"You should meet Anna.\" Two coffee cups on a table, a Wednesday.",
           "vision": "The introduction layer for every field that runs on who you know: strangers who need each other meet because someone with context says so.",
           "why": "Work on the transition runs on who you know, and most people are outside the inner circle. A warm introduction around a shared mission turns a year of waiting into a Wednesday.",
@@ -200,16 +210,16 @@ window.IDEA_MAP = {
           "scene": "A job application with a small stamp: \"written by a person, 3 h 12 min of work shown\". (guess)",
           "vision": "You can always tell whether a person is on the other end, and nothing else about connection can be trusted without it.",
           "why": "Humans must stay distinguishable from agents online, or trust between people collapses. Once convincing content is cheap, knowing who is real becomes the scarce thing.",
-          "question": "Will employers and platforms trust a proof of human effort over their own AI screen? (guess)"
+          "question": "Will public-sector e-ID cover this in time?"
         }
       ]
     },
     {
       "id": "thinking",
       "title": "We stop thinking",
-      "runLabel": "We will [stop] thinking",
+      "runLabel": "We will [stop] thinking.",
       "tint": "#3951d8",
-      "question": "What happens to our judgment when an answer is always one prompt away?",
+      "question": "Do we get brain rot when every answer is one prompt away?",
       "openSlots": 0,
       "ideas": [
         {
@@ -222,7 +232,7 @@ window.IDEA_MAP = {
         },
         {
           "id": "thinking-2",
-          "title": "Skill-loss Monitoring",
+          "title": "Skill-loss monitoring",
           "scene": "An HR dashboard, a grid of skills. One square is grey: \"financial modelling, 14 months since anyone did it unaided\". (guess)",
           "vision": "Every company knows which human skills it still has, before it needs them. (guess: new, not in the sheet)",
           "why": "It makes the erosion of human skills visible, so someone can act before it is too late. (guess)",
@@ -241,14 +251,14 @@ window.IDEA_MAP = {
     {
       "id": "work",
       "title": "We’re out of work",
-      "runLabel": "We will be [out] of work",
+      "runLabel": "We will be [out] of work.",
       "tint": "#f39416",
       "question": "What happens when people lose their jobs faster than they can build a new livelihood?",
       "openSlots": 0,
       "ideas": [
         {
           "id": "work-2",
-          "title": "Adult re-education for AI-driven job loss",
+          "title": "AI enablement",
           "scene": "A 48-year-old accountant at a kitchen table with a laptop and a certificate that reads \"AI-assisted audit lead\". (guess)",
           "vision": "Nobody falls out of work because the training came too late: people keep their economic relevance through the transition.",
           "why": "When AI takes over parts of a job, people keep their economic relevance only if retraining arrives before the layoff, not after. (guess)",
@@ -275,18 +285,18 @@ window.IDEA_MAP = {
     {
       "id": "equity",
       "title": "We don’t benefit equally",
-      "runLabel": "We won’t benefit [equally]",
+      "runLabel": "We won’t benefit [equally].",
       "tint": "#d73f75",
       "question": "Who gets access to the skills, tools and care that could make life better?",
       "openSlots": 2,
       "ideas": [
         {
           "id": "equity-1",
-          "title": "Female AI Academy",
-          "scene": "Ten women around a long table, laptops open, one projecting an agent she built that morning. (guess)",
-          "vision": "Senior women use AI with judgment and lead in it instead of being led by it. (guess)",
-          "why": "Senior women who keep up with AI use it with judgment. A prototype exists: six interviews and a live landing page.",
-          "question": "Will senior women pay for it, and how much? The price is not validated yet."
+          "title": "Representation in AI models",
+          "scene": "Two answers to the same question, side by side. In the first, the doctor is a man and the nurse a woman. In the second, nobody is assumed. (draft)",
+          "vision": "AI models describe and serve women and minorities as accurately as everyone else. (draft)",
+          "why": "Models learn from data in which women and minorities are missing or misdescribed, and they repeat it at scale: in hiring, in health, in credit. As more decisions run through models, a gap in the data becomes a gap in people’s lives. (draft)",
+          "question": "Who pays to fix it: the model makers, the companies deploying the models, or a regulator? (draft)"
         },
         {
           "id": "equity-2",

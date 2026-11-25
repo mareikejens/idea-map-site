@@ -411,8 +411,30 @@ const Play=(()=>{
     sound.onclick=()=>{Sound.toggle();label()};label();
     nav.querySelector('.replay').onclick=()=>go(0);
   }
+  // The little intro before the game: one question, and the five problems as ways in.
+  // It is shown once per visit; replaying the story brings it back.
+  let asked=false;
+  try{asked=sessionStorage.getItem('idea-map-asked')==='yes'}catch{}
+  function ask(){
+    const row=(k,title,sub,marble)=>'<button class="ask-row" data-ask="'+k+'">'+marble+'<span class="ask-text"><b>'+esc(title)+'</b><small>'+esc(sub)+'</small></span><i aria-hidden="true">›</i></button>';
+    app.innerHTML='<section class="world play ask"><div class="ask-stage"><h1 tabindex="-1">'+esc(state.name?named(U.askTitleNamed):U.askTitle)+'</h1><p class="ask-body">'+esc(U.askBody)+'</p>'+
+      '<div class="ask-list">'+groups.map((g,k)=>{const n=ideas.filter(i=>i.g===k&&!i.own).length;return row(k,g.title,fill(U.askIdeas,{n}),ball({g:k,shade:0}))}).join('')+
+      row('own',U.askOther,U.askOtherHint,'<span class="ball own" aria-hidden="true"></span>')+'</div>'+
+      '<nav class="ask-nav"><button class="subtle" data-action="back">'+esc(U.back)+'</button></nav></div></section>';   // app.js handles data-action="back"
+    for(const b of app.querySelectorAll('.ask-row'))b.onclick=()=>{
+      const own=b.dataset.ask==='own';
+      asked=true;try{sessionStorage.setItem('idea-map-asked','yes')}catch{}
+      if(!own){state.area=+b.dataset.ask;save()}
+      Track.send('ask',{title:own?U.askOther:groups[state.area].title});
+      Sound.wake();mount();if(own)openOwn();
+    };
+    if(!reduced.matches)for(const [n,b] of [...app.querySelectorAll('.ask-row')].entries())
+      b.animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'none'}],{duration:420,delay:120+n*55,easing:'cubic-bezier(.2,.8,.2,1)',fill:'backwards'});
+  }
   function mount(){
     unmount();
+    try{sessionStorage.setItem('idea-map-reached','yes')}catch{}       // a reload brings the visitor back here (see the end of app.js)
+    if(!asked)return ask();
     app.innerHTML='<section class="world play"><div class="play-stage">'+
       '<header class="play-head"><div class="area-row"><p class="area-kicker"></p>'+
       '<button class="area-step" data-step="-1" aria-label="'+esc(U.areaPrev)+'">‹</button><button class="area-step" data-step="1" aria-label="'+esc(U.areaNext)+'">›</button></div>'+
@@ -442,6 +464,7 @@ const Play=(()=>{
     head.onpointerup=e=>{if(startX===null)return;const d=e.clientX-startX;startX=null;if(Math.abs(d)>45)setArea(state.area+(d<0?1:-1))};
   }
   function unmount(){
+    if(state.step!==12){asked=false;try{sessionStorage.removeItem('idea-map-asked');sessionStorage.removeItem('idea-map-reached')}catch{}}   // leaving for the story: ask again next time
     if(!stage)return;
     cancelAnimationFrame(frame);frame=0;clearTimeout(hintTimer);loose.clear();stage=null;engine=null;
     document.querySelector('#mastTools').innerHTML='';
