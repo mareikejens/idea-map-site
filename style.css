@@ -225,3 +225,8 @@ dialog{background:var(--studio);border:1px solid #e2d8c8;box-shadow:0 20px 80px 
 /* iPhone Safari zooms in on any field with text under 16px and stays zoomed, which pushes the page off the right edge
    and the bottom. 16px fields stop that, without blocking pinch-zoom for people who need it. */
 input,textarea,select{font-size:max(16px,1em)}
+/* Cover → story: the portrait flies up into the header (see dockPortrait). Without this the cross-fade also kept the old
+   portrait fading out in place, so two pictures showed at once. Naming it takes it out of the page snapshot, and its old
+   snapshot is hidden: the only portrait left on screen is the one that moves. */
+.welcome-copy .face img{view-transition-name:portrait}
+::view-transition-old(portrait){display:none}
