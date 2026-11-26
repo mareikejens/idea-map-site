@@ -511,11 +511,10 @@ const Play=(()=>{
   try{asked=sessionStorage.getItem('idea-map-asked')==='yes'}catch{}
   function ask(){
     const row=(k,title,sub,marble)=>'<button class="ask-row" data-ask="'+k+'">'+marble+'<span class="ask-text"><b>'+esc(title)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</span><i aria-hidden="true">›</i></button>';
-    app.innerHTML='<section class="world play ask"><div class="ask-stage"><h1 tabindex="-1">'+esc(state.name?named(U.askTitleNamed):U.askTitle)+'</h1>'+
+    app.innerHTML='<section class="world play ask"><div class="ask-stage"><h1 tabindex="-1">'+esc(state.name?named(U.askTitleNamed):U.askTitle).replace(/\n/g,'<br>')+'</h1>'+
       // The one written hint on the site, by choice: tapping a row looks like a single answer, but the jar takes as many as you like.
       (U.askBody?'<p class="ask-sub">'+esc(U.askBody)+'</p>':'')+
-      '<div class="ask-list">'+groups.map((g,k)=>row(k,g.title,'',ball({g:k,shade:0}))).join('')+
-      row('own',U.askOther,U.askOtherHint,'<span class="ball own" aria-hidden="true"></span>')+'</div>'+
+      '<div class="ask-list">'+groups.map((g,k)=>row(k,g.title,'',ball({g:k,shade:0}))).join('')+'</div>'+   // no "Something else" row: own ideas are added from the shelves
       '<nav class="ask-nav"><button class="subtle" data-action="back">'+esc(U.back)+'</button></nav></div></section>';   // app.js handles data-action="back"
     for(const b of app.querySelectorAll('.ask-row'))b.onclick=()=>{
       const own=b.dataset.ask==='own';
