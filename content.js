@@ -25,6 +25,7 @@ window.IDEA_MAP = {
     "worriedGuest": "What about you?",
     "worriedAsk": "Are you worried?",
     "loss": "We lose control.",
+    "worriedDrag": "Move the marble to answer.",
     "worriedLevels": ["Not really", "A little", "Worried", "Very worried"],
     "iAm": "I am.",
     "iAmToo": "So am I.",

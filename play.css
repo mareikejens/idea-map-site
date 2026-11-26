@@ -145,6 +145,9 @@
 .answers{display:block;margin:14px 0 0;min-height:1.6em;opacity:0;transition:opacity .4s ease .3s}
 .headline:has(.held.shown) .answers{opacity:1}
 .drag-level{font-family:"Crete Round",Georgia,serif;font-weight:400;font-size:1.45em;color:#a32b36}
+.dragging .drag-hint{display:none}.drag-level{display:none}.dragging .drag-level{display:block}
+.drag-hint.nudge{animation:hint-nudge .7s ease-out}
+@keyframes hint-nudge{0%{color:#a32b36;translate:0 0}25%{translate:6px 0}50%{translate:-3px 0}100%{color:inherit;translate:0 0}}
 .stage:has(.held.shown) .illustration{touch-action:none}
 
 /* ---------- the ending: the visitor's jar arrives on a shelf beside Mareike ---------- */

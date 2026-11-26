@@ -80,7 +80,7 @@ const MarbleRun = (() => {
     const explosion=typeof RunExplosion==='undefined'?require('./explosion.js'):RunExplosion;
     return '<defs><linearGradient id="ash"><stop stop-color="#cdb292"/><stop offset=".4" stop-color="#eddcc5"/><stop offset="1" stop-color="#d3b99a"/></linearGradient><radialGradient id="shadow"><stop stop-color="#77664e" stop-opacity=".27"/><stop offset="1" stop-color="#77664e" stop-opacity="0"/></radialGradient><g id="glass-at-impact"><image href="assets/run-glass.webp" x="-19" y="-19" width="38" height="38"/></g><clipPath id="orb"><circle r="19"/></clipPath></defs>'+
       sections.map((s,i)=>'<g id="part'+i+'">'+s+'</g>').join('')+
-      mateArt()+'<ellipse id="contact" rx="23" ry="4" fill="url(#shadow)"/><g id="traveller"><image href="assets/run-glass.webp" x="-19" y="-19" width="38" height="38" clip-path="url(#orb)"/></g>'+
+      mateArt()+'<circle id="halo" r="19" fill="none" stroke="#a32b36" stroke-width="1.4" opacity="0" vector-effect="non-scaling-stroke"/><ellipse id="contact" rx="23" ry="4" fill="url(#shadow)"/><g id="traveller"><image href="assets/run-glass.webp" x="-19" y="-19" width="38" height="38" clip-path="url(#orb)"/></g>'+
       explosion.art();
   }
   // Integrate travel time along the dipped rail from gravitational potential.

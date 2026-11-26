@@ -66,7 +66,7 @@ let lastCamera=null,lastPose=null,lastScene=0,coverX=-300,openerStart=-115,rig=n
 // "Are you worried?" is answered with the marble itself. While the question stands, the visitor can drag the marble along the
 // rail: back up the calm slope, or towards the edge. Let go and gravity takes it: it always ends up at the brink, later or sooner.
 // worry = {x: place on the rail, v: speed, dragging, anchor: where the camera stays, level: 0 calm … 1 at the edge}.
-let worry=null,rolledIn=false,dragged=false,askedAt=0;   // askedAt: when the question appeared (0 = not yet)
+let worry=null,rolledIn=false,dragged=false,nudgedAt=0,askedAt=0;   // askedAt: when the question appeared (0 = not yet)
 const worryBack=150;   // how far back from the brink the marble can be pulled, in drawing units
 const worryLevel=x=>MarbleRun.clamp((x-(MarbleRun.brink-worryBack))/worryBack);
 function worryStep(now){
@@ -108,7 +108,7 @@ function machine(stage,step){
   const joinSpan=f0?0:MarbleRun.clamp(520/duration);
   // "I am." and the marble goes: only a breath at the brink while the words change, then it races down the drop.
   const hold=step===3&&!f0&&!rolledIn?700:0;
-  rolledIn=false;worry=null;askedAt=0;
+  rolledIn=false;worry=null;askedAt=0;nudgedAt=0;
   lastScene=step;
   // f is the place in the scene's choreography, u the plain time since the scene began (both 0 to 1).
   function paint(f,u){
@@ -124,7 +124,7 @@ function machine(stage,step){
       }
     }
     // The visitor has the marble: it is where they put it, and the run shivers more the closer it is to the edge.
-    let follow=pose;
+    let follow=pose,halo=null;
     if(step===2&&worry){
       worryStep(performance.now());
       const at=MarbleRun.ride(Math.min(worry.x,MarbleRun.brink+40));
@@ -133,9 +133,13 @@ function machine(stage,step){
     }
     else if(step===2&&askedAt&&!reduced.matches){
       // Nobody is told to drag. The marble rocks on the spot instead, like something that wants to be picked up.
-      const since=(performance.now()-askedAt)/1000,rock=Math.min(1,since/.8)*7*Math.sin(since*2.6);
-      const at=MarbleRun.ride(MarbleRun.brink-7+rock);
-      pose={...pose,x:at.x,y:at.y,spin:(MarbleRun.brink-7+rock+115)*180/(19*Math.PI)};
+      const now=performance.now(),since=(now-askedAt)/1000,rock=Math.min(1,since/.8)*10*Math.sin(since*2.6);
+      const hop=nudgedAt?Math.min(1,(now-nudgedAt)/420):1;
+      const at=MarbleRun.ride(MarbleRun.brink-10+rock);
+      pose={...pose,x:at.x,y:at.y-22*4*hop*(1-hop),spin:(MarbleRun.brink-10+rock+115)*180/(19*Math.PI)};
+      // A ring opens around the marble every couple of seconds: "this one can be picked up".
+      const beat=(since%2.2)/1.1;
+      halo={x:at.x,y:pose.y,scale:1+.75*Math.min(1,beat),opacity:beat<1?.55*(1-beat)*Math.min(1,since/.6):0};
     }
     lastPose=pose;
     // Worry: the run shivers under the marble (which rides along with its section) and cracks draw themselves in ahead of it.
@@ -150,6 +154,8 @@ function machine(stage,step){
     stage.closest('.stage')?.classList.toggle('stressed',pose.stressReached);
     for(const [id,value] of Object.entries(MarbleRun.transforms(shown)))nodes.get(id).setAttribute('transform',value);
     for(const [id,value] of Object.entries(MarbleRun.fades(pose)))nodes.get(id).setAttribute('opacity',value);
+    const ring=nodes.get('halo');ring.setAttribute('opacity',halo?halo.opacity:0);
+    if(halo)ring.setAttribute('transform','translate('+halo.x.toFixed(2)+' '+halo.y.toFixed(2)+') scale('+halo.scale.toFixed(3)+')');
     const rect=stage.getBoundingClientRect(),mobile=rect.width<700;
     if(!rect.width)return;   // not laid out (hidden tab): there is no camera to aim yet
     // In the collapse scene the camera stays close for the first moment of the plunge, then pulls back as the marble gathers speed.
@@ -275,7 +281,7 @@ function story(){
   // "I am." answers the question from the scene before, then the first danger follows.
   const lead=s===3?'<span class="iam">'+esc(state.worried==='yes'?S.iAmToo:S.iAm)+'</span><span class="whatif">'+esc(S.whatIf)+'</span> ':'';
   const head='<h1 tabindex="-1" class="'+(s===2?'worry':'')+'">'+lead+(lead?'<span class="answer">'+title+'</span>':title)+'</h1>'+(body?'<p>'+lateWords(body)+'</p>':'')+
-    (s===2?'<p class="answers"><b class="drag-level" aria-live="polite"></b></p>':'');
+    (s===2?'<p class="answers"><span class="drag-hint">'+esc(S.worriedDrag)+'</span><b class="drag-level" aria-live="polite"></b></p>':'');
   let section=app.querySelector('.stage.machine');
   if(!section){
     app.innerHTML='<section class="stage machine '+kind+'"><div class="headline">'+head+'</div><div class="illustration"></div>'+controls(U.next,true)+'</section>';
@@ -475,6 +481,13 @@ function go(n,after){
   // "Are you worried?": the first click on that scene brings the question, the next one moves on.
   const held=from===2&&n>2&&app.querySelector('.headline:not(.leaving) .held:not(.shown)');
   if(held){held.classList.add('shown');askedAt=performance.now();return}
+  // This scene works differently from the ones before it, and has to say so: the first tap that misses the marble
+  // does not move on. The marble hops and the line under the question lights up. The tap after that continues as usual.
+  if(from===2&&n>2&&askedAt&&!worry&&!nudgedAt&&!reduced.matches&&app.querySelector('.held.shown')){
+    nudgedAt=performance.now();
+    const hint=app.querySelector('.drag-hint');hint?.classList.remove('nudge');void hint?.offsetWidth;hint?.classList.add('nudge');
+    return;
+  }
   state.step=n;state.paused=false;cancelAnimationFrame(raf);clearTimeout(headTimer);
   const swap=()=>{
     if(from===12)Play.unmount();
