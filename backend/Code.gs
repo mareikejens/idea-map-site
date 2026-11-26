@@ -111,6 +111,7 @@ function logEvent(d) {
 const DASHBOARD = 'Dashboard';
 const BREAK_MINUTES = 10;                            // a pause longer than this does not count as time on the site
 const TEST_VISITOR = /^(claude-check|setuptest)/;   // visits made by the setup checks: never counted
+const TEST_NAME = /test/i;                           // a visitor who gave a name with "test" in it (Test, Mareike Test, Setup test ...): never counted
 
 function refreshDashboard() {
   const lock = LockService.getScriptLock();
@@ -134,7 +135,12 @@ function refreshDashboard() {
 // Turns the raw rows of "Events" and "Jars" (without their header rows) into the numbers on the dashboard.
 // No Google services in here, so it can be tested outside Google.
 function summarise(events, jars, from) {
-  const counts = (when, id) => !!id && !TEST_VISITOR.test(String(id)) && when instanceof Date && (!from || when >= from);
+  // A name is often only given late in a visit (in the send form), so the earlier rows of the same visitor have none:
+  // one row with a test name leaves the whole visitor out.
+  const tests = new Set();
+  for (const [, id, name] of events) if (TEST_NAME.test(String(name || ''))) tests.add(String(id));
+  for (const [, name, , , , , , , , id] of jars) if (TEST_NAME.test(String(name || ''))) tests.add(String(id));
+  const counts = (when, id) => !!id && !TEST_VISITOR.test(String(id)) && !tests.has(String(id)) && when instanceof Date && (!from || when >= from);
   const visitors = new Map(), marbles = new Map(), concerns = new Map();
   const visitor = (id, when) => {
     if (!visitors.has(id)) visitors.set(id, { id: String(id), name: '', first: when, last: when, minutes: 0, did: new Set(), worried: '', concern: '', opened: new Set(), jar: [], sent: false, coffee: false });
@@ -198,7 +204,7 @@ function dashboardRows(s, from, now) {
   const title = text => { rows.push([]); rows.push([text]); bold.push('A' + rows.length); };
   const header = cells => { rows.push(cells); bold.push('A' + rows.length + ':I' + rows.length); };
   rows.push(['Idea map dashboard', '', 'Updated', now]); bold.push('A1');
-  rows.push(['Counting visits from', from || '', 'Type a date into B2 to leave out earlier (test) visits. Empty counts everything.']);
+  rows.push(['Counting visits from', from || '', 'Type a date and time into B2 to leave out earlier visits. Empty counts everything. Visitors with "test" in their name are always left out.']);
   title('Overview');
   rows.push(['Unique visitors', s.visitors]);
   rows.push(['Started the story', s.started]);
