@@ -267,10 +267,10 @@ function about(){
   openSheet('<div class="detail about"><img class="portrait" src="assets/mareike.jpg" alt=""><h2>'+esc(A.name)+'</h2><p>'+esc(A.lead)+'</p><p>'+esc(A.body)+'</p><p class="small">'+esc(A.background)+'</p><ul class="logos" aria-label="'+esc(A.logosLabel)+'">'+logos.map(([file,name,h])=>'<li><img src="assets/logos/'+file+'" alt="'+name+'" style="height:'+h+'em"></li>').join('')+'</ul><p class="links"><a href="https://www.linkedin.com/in/mareike-jens/" target="_blank" rel="noopener">LinkedIn</a><a href="https://mareikejens.substack.com/" target="_blank" rel="noopener">Substack</a>'+(A.email?'<a href="mailto:'+esc(A.email)+'">'+esc(A.emailLabel)+'</a>':'')+(window.IDEA_MAP.send?.bookingUrl?'<a href="'+esc(window.IDEA_MAP.send.bookingUrl)+'" target="_blank" rel="noopener">'+esc(A.bookLabel)+'</a>':'')+'</p></div>');
 }
 document.addEventListener('click',e=>{if(e.target.closest('[data-about]'))about()});
-// The legal footer: one thin line under every screen. Imprint and privacy note open as sheets; their words are in content.js ("legal").
+// The legal footer: one thin line under every screen. Each entry of "legal" in content.js is a link that opens as a sheet.
 const L=window.IDEA_MAP.legal;
 if(L){
-  document.body.insertAdjacentHTML('beforeend','<footer class="legal">'+['imprint','privacy'].map(k=>'<button type="button" data-legal="'+k+'">'+esc(L[k].title)+'</button>').join('')+'</footer>');
+  document.body.insertAdjacentHTML('beforeend','<footer class="legal">'+Object.keys(L).map(k=>'<button type="button" data-legal="'+k+'">'+esc(L[k].title)+'</button>').join('')+'</footer>');
   document.addEventListener('click',e=>{
     const page=L[e.target.closest('[data-legal]')?.dataset.legal];if(!page)return;
     openSheet('<div class="detail legal-text"><h2>'+esc(page.title)+'</h2>'+page.sections.map(([head,text])=>(head?'<h3>'+esc(head)+'</h3>':'')+'<p>'+esc(text).replace(/\n/g,'<br>')+'</p>').join('')+'</div>');

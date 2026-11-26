@@ -19,18 +19,10 @@ window.IDEA_MAP = {
     "bookLabel": "Book a meeting"
   },
   "legal": {
-    "imprint": {
-      "title": "Imprint",
-      "sections": [
-        ["", "Mareike Jens\n[STREET AND NUMBER]\n[POSTCODE] Zürich, Switzerland"],
-        ["Contact", "mareike.jens@gmail.com"],
-        ["", "Responsible for the content of this site: Mareike Jens."]
-      ]
-    },
     "privacy": {
       "title": "Privacy",
       "sections": [
-        ["Who is responsible", "Mareike Jens, address as in the imprint. Questions and requests: mareike.jens@gmail.com."],
+        ["Who is responsible", "Mareike Jens, Zürich, Switzerland. Questions and requests: mareike.jens@gmail.com."],
         ["On your device", "Your name and your jar are kept in this browser tab so the site remembers them. They are gone when you close the tab. No cookies, no advertising or analytics networks."],
         ["What I record while you visit", "Which ideas you open, how long a card stays open, what goes into your jar and your answer to “Are you worried?”. This is stored with the name you entered on the first page and a random visit number, also if you never send your jar. I use it to improve the ideas and this site, and to prepare our conversation."],
         ["What you send me", "When you send your jar or book a coffee: your name, your email address, your marbles, the ideas you added and your note. I use this to reply to you and to prepare our conversation."],
