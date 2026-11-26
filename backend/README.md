@@ -44,6 +44,26 @@ Paste the same URL into `"trackEndpoint"` as well. Then every opened idea, every
 Before you switch this on, tell visitors: put a sentence into `"notice"` under `"welcome"` in `content.js`
 (it shows under the name field). `track.js` explains what is collected.
 
+## Dashboard: who came and what they looked at
+
+The script keeps a **Dashboard** tab in the same Sheet. It is rewritten after every event and every jar, so it is always
+current, also on a phone. It shows:
+
+- **Overview:** unique visitors, how many started the story, reached the marbles, opened a marble, filled and sent a jar,
+  and the median and average time on the site.
+- **Marbles:** per marble, how many visitors opened it, how often, how often it went into a jar, and the seconds it was read.
+- **Concern picked** on "What are you most concerned about?".
+- **Visitors**, latest first: time on the site, answers, marbles opened and in the jar, whether the jar was sent.
+
+Good to know:
+
+- **Leaving out test visits:** type a date into cell **B2** of the tab. Only visits from that day on are counted.
+  B2 is the only cell to edit: everything else is overwritten.
+- **Time on the site** runs from a visitor's first to their last recorded action. Pauses longer than 10 minutes are not
+  counted (`BREAK_MINUTES` in `Code.gs`). Reading the last screen after the last action is not measured.
+- **A visitor** is one browser tab. The same person on phone and laptop counts twice.
+- The tab appears with the first visit after the script is updated. To get it at once, run **refreshDashboard** in the editor.
+
 ## Changing the script later
 
 After editing `Code.gs` in the Apps Script editor: **Deploy → Manage deployments → Edit → Version: New version**.
