@@ -100,7 +100,6 @@
 
 /* sending, in one step */
 .send-form h2{margin:0 0 8px}
-.send-summary{margin:0 0 4px!important;color:var(--muted);font-size:14.5px;line-height:1.4}
 .send-note{margin-top:12px}
 .send-note summary{font-size:14px;color:var(--muted);cursor:pointer;text-decoration:underline;text-decoration-color:#c9bdac;text-underline-offset:4px;list-style:none}
 .send-note summary::-webkit-details-marker{display:none}
@@ -239,7 +238,7 @@ dialog:has(.own-form){overflow:hidden;max-height:none;padding:18px 20px 18px}
 .finale-jar .bottle{width:132px;height:172.5px}.finale-jar .bottle-scale{transform:scale(.88)}
 .finale-jar .cork{opacity:1;translate:0 0}.finale-jar .jar-bow{opacity:1;scale:1}
 /* The send form says again what the jar is for (ui.sendIntro). */
-.send-intro{margin:0 0 6px;font-size:15px;line-height:1.45}
+.send-intro{margin:0 0 6px;font-size:15px;line-height:1.45;white-space:pre-line}   /* a new line in the text (\n in content.js) is shown as a line break */
 /* The goal of the game, before the visitor picks: readable, not a grey footnote. */
 .play.ask .ask-sub{color:var(--ink);font-size:16px;line-height:1.45}
 /* Owner, 26 Nov: the spare height is now shared equally above the heading and below the list (the block sits in the
