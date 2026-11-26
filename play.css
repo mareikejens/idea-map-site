@@ -135,8 +135,9 @@
 /* Back sits at the bottom of the screen, where the story and the marble page have it. */
 .ask-stage{min-height:100%;display:flex;flex-direction:column}
 .ask-nav{margin-top:auto}
-/* The rows share the free height: equal gaps between the heading, each row and Back (never less than 6px). */
-.ask-list{flex:1;align-content:space-evenly;margin-top:0;gap:6px;padding-block:6px}
+/* The rows stay together as one list right under the heading, with one even gap; spare height goes below them, above Back.
+   (Sharing the height out between the rows made the gaps larger than the rows on tall screens.) */
+.ask-list{margin-top:6px;gap:10px}
 @media(max-width:720px){.ask-stage{padding-bottom:24px}.ask-nav{margin-left:calc(7vw - 18px)}}
 /* Short phones: tighter rows, so the five questions and Back fit without scrolling. */
 @media(max-height:720px){.ask-row{min-height:52px;padding-block:6px}.ask-stage{padding-top:14px}}

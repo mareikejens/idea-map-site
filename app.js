@@ -68,6 +68,8 @@ let lastCamera=null,lastPose=null,lastScene=0,coverX=-300,openerStart=-115,rig=n
 // rail: back up the calm slope, or towards the edge. Let go and gravity takes it: it always ends up at the brink, later or sooner.
 // worry = {x: place on the rail, v: speed, dragging, anchor: where the camera stays, level: 0 calm … 1 at the edge}.
 let worry=null,rolledIn=false,dragged=false,nudgedAt=0,askedAt=0;   // askedAt: when the question appeared (0 = not yet)
+let goPass=false;  // set just before go() by keyboard, Continue and Skip: they may leave "Are you worried?" without an answer
+let worryFelt=0;   // how hard the run was shaking when the marble went over the edge (carried into the next scene)
 const worryBack=150;   // how far back from the brink the marble can be pulled, in drawing units
 const worryLevel=x=>MarbleRun.clamp((x-(MarbleRun.brink-worryBack))/worryBack);
 function worryStep(now){
@@ -81,7 +83,7 @@ function worryStep(now){
   if(w.x<back){w.x=back;w.v=-w.v*.3}
   if(w.x>=MarbleRun.brink&&!w.done){
     // Over the edge: this is the answer, and the story goes on without another tap.
-    w.done=true;rolledIn=true;
+    w.done=true;rolledIn=true;worryFelt=worryLevel(w.x);
     state.worried=w.answer;save();Track.send('worried',{answer:w.answer,level:+w.level.toFixed(2)});
     setTimeout(()=>{if(state.step===2)go(3)},0);
   }
@@ -109,6 +111,9 @@ function machine(stage,step){
   const joinSpan=f0?0:MarbleRun.clamp(520/duration);
   // "I am." and the marble goes: only a breath at the brink while the words change, then it races down the drop.
   const hold=step===3&&!f0&&!rolledIn?700:0;
+  // The worry the visitor just gave goes on into "So am I.": the run keeps shaking and the page stays red until the
+  // run shatters. Only when the marble was rolled over the edge, not when coming back from a later scene.
+  const carriedWorry=step===3&&!f0&&rolledIn?worryFelt:0;
   rolledIn=false;worry=null;askedAt=0;nudgedAt=0;
   lastScene=step;
   // f is the place in the scene's choreography, u the plain time since the scene began (both 0 to 1).
@@ -144,6 +149,11 @@ function machine(stage,step){
       // A ring opens around the marble every couple of seconds: "this one can be picked up".
       const beat=(since%2.2)/1.1;
       halo={x:at.x,y:pose.y,scale:1+.75*Math.min(1,beat),opacity:beat<1?.55*(1-beat)*Math.min(1,since/.6):0};
+    }
+    else if(carriedWorry&&pose.breakage<MarbleRun.impact()+.07){
+      // Still the visitor's worry: same shaking and red as on the scene before, easing out quickly once the run shatters.
+      felt=carriedWorry*(1-MarbleRun.clamp((pose.breakage-MarbleRun.impact())/.07));
+      pose={...pose,tremor:Math.max(pose.tremor||0,(.2+2.6*felt**1.4)*(felt>0))};
     }
     lastPose=pose;
     // Worry: the run shivers under the marble (which rides along with its section) and cracks draw themselves in ahead of it.
@@ -297,7 +307,7 @@ function story(){
   const kind=group?'station':s<=2?'opening':'';
   // The first danger is posed as a question: "I am." stands alone while the marble races down the drop, "What if…" then takes its place, and the answer appears as the marble bursts.
   // "I am." answers the question from the scene before, then the first danger follows.
-  const lead=s===3?'<span class="iam">'+esc(state.worried==='yes'?S.iAmToo:state.worried==='no'?S.iAmBut:S.iAm)+'</span><span class="whatif">'+esc(S.whatIf)+'</span> ':'';
+  const lead=s===3?'<span class="iam">'+esc(state.worried==='yes'||state.worried==='little'?S.iAmToo:state.worried==='no'?S.iAmBut:S.iAm)+'</span><span class="whatif">'+esc(S.whatIf)+'</span> ':'';
   const head='<h1 tabindex="-1" class="'+(s===2?'worry':'')+'">'+lead+(lead?'<span class="answer">'+title+'</span>':title)+'</h1>'+(body?'<p>'+lateWords(body)+'</p>':'')+
     (s===2?'<p class="answers"><b class="drag-level" aria-live="polite"></b></p>':'');
   let section=app.querySelector('.stage.machine');
@@ -498,10 +508,12 @@ function go(n,after){
   // "Are you worried?": the first click on that scene brings the question, the next one moves on.
   const held=from===2&&n>2&&app.querySelector('.headline:not(.leaving) .held:not(.shown)');
   if(held){held.classList.add('shown');askedAt=performance.now();return}
-  // This scene works differently from the ones before it, and has to say so: the first tap that misses the marble
-  // does not move on. The marble hops (a visual cue only: no written hints on this site). The tap after that continues as usual.
-  if(from===2&&n>2&&askedAt&&!worry&&!nudgedAt&&!reduced.matches&&app.querySelector('.held.shown')){
-    nudgedAt=performance.now();
+  // "Are you worried?" is answered with the marble, and a tap anywhere does not move on: the marble hops instead
+  // (a visual cue only: no written hints on this site), every time. Keyboard, the hidden Continue button and Skip
+  // still pass (goPass), so nobody who cannot drag is stuck.
+  const pass=goPass;goPass=false;
+  if(from===2&&n>2&&!pass&&!worry?.done&&app.querySelector('.held.shown')){
+    if(!reduced.matches)nudgedAt=performance.now();
     return;
   }
   state.step=n;state.paused=false;cancelAnimationFrame(raf);clearTimeout(headTimer);
@@ -546,20 +558,22 @@ app.onclick=e=>{
     return;
   }
   switch(b.dataset.action){
-    case'next':go(state.step+1);break;
+    case'next':goPass=true;go(state.step+1);break;
     case'back':go(state.step-1);break;
     case'restart':go(0);break;
     case'skip':
       // Straight to the marble page (all the marbles, full screen). "Are you worried?" holds back its question and
-      // hops the marble on a stray tap: mark both as done so the jump is not caught by them.
-      app.querySelector('.held')?.classList.add('shown');nudgedAt=nudgedAt||1;
+      // waits for the marble: mark the question shown and pass, so the jump is not caught there.
+      app.querySelector('.held')?.classList.add('shown');goPass=true;
       go(10);break;
   }
 };
 document.querySelector('.mast').onclick=e=>{if(!e.target.closest('button,a')&&state.step>=1&&state.step<=11&&!sheet.open)go(state.step+1)};
 document.addEventListener('keydown',e=>{
   if(state.step<1||state.step>11||sheet.open||e.repeat||e.altKey||e.ctrlKey||e.metaKey||e.target.closest('button,a,input,textarea,select'))return;
-  if(e.key==='Enter'||e.key===' '||e.key==='ArrowRight'){e.preventDefault();go(state.step+1)}
+  // → / Enter / Space: on; ←: back (not from the first scene, where back would leave the story for the cover).
+  if(e.key==='Enter'||e.key===' '||e.key==='ArrowRight'){e.preventDefault();goPass=true;go(state.step+1)}
+  else if(e.key==='ArrowLeft'&&state.step>1){e.preventDefault();go(state.step-1)}
 });
 // ?skip jumps straight to the game, for reviewing it without replaying the story.
 // A visitor who already reached the ideas in this tab lands there again after a reload, instead of at the welcome screen.
