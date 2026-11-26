@@ -81,6 +81,10 @@ const Play=(()=>{
     for(const b of stage.querySelectorAll('.pick:not(.add-own)'))bindPick(b);
     stage.querySelector('.add-own').onclick=()=>{Sound.wake();openOwn()};
     seenAreas.add(state.area);
+    // The shelves go on to both sides: a marble of the neighbouring problem looks in from each edge of the screen.
+    // Until the visitor has moved once, the one on the right keeps rolling in a little (play.css, "fresh").
+    for(const peek of stage.querySelectorAll('.area-peek'))peek.innerHTML=ball({g:(state.area+ +peek.dataset.step+groups.length)%groups.length,shade:0});
+    stage.classList.toggle('fresh',seenAreas.size<2);
   }
   function refresh(){
     const count=state.picked.size;
@@ -145,6 +149,7 @@ const Play=(()=>{
       // Above the funnel, one sloped ramp turns the screen into a small marble run: the marble rolls one way, drops, rolls back.
       // It is left out when there is no room between the shelves and the funnel (small phones, full shelves).
       const shelves=stage.querySelector('.play-shelves').getBoundingClientRect(),first=shelves.bottom-S.top+34,reach=W-84,rise=reach*.33;
+      stage.style.setProperty('--peek-y',(stage.querySelector('.pick .ball').getBoundingClientRect().top-S.top+parseFloat(getComputedStyle(stage).getPropertyValue('--diam'))/2)+'px');   // level with the marbles on the top shelf
       for(let k=0,y=first;k<1&&y+rise<=mouth.y-drop-30;k++,y+=rise+62){
         const fromLeft=k%2===0,a={x:fromLeft?-4:W+4,y},b={x:fromLeft?reach:W-reach,y:y+rise};
         add(bar(a,b,7,{restitution:.25}),'rail');svg+='<line class="rail-line" x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'"/>';
@@ -322,12 +327,16 @@ const Play=(()=>{
   }
   function openOwn(){
     if(state.own.length>=5)return hint(U.ownFull,6000);
-    openSheet('<form class="detail own-form" novalidate><span class="ball own" aria-hidden="true"></span><h2>'+esc(U.ownTitle)+'</h2><p>'+esc(U.ownIntro)+'</p>'+
-      '<label>'+esc(U.ownName)+'<input name="title" maxlength="60" required autocomplete="off"></label>'+
-      '<label>'+esc(U.ownNote)+'<textarea name="note" rows="3" maxlength="280"></textarea></label>'+
-      '<label>'+esc(U.ownArea)+'<select name="g">'+groups.map((g,k)=>'<option value="'+k+'"'+(k===state.area?' selected':'')+'>'+esc(g.title)+'</option>').join('')+'</select></label>'+
+    // Everything fits above a phone keyboard without scrolling, so the button is always in view: no intro text, the field
+    // names sit inside the fields, and the problem is chosen by its marble instead of from a list.
+    openSheet('<form class="detail own-form" novalidate><h2><span class="ball own" aria-hidden="true"></span>'+esc(U.ownTitle)+'</h2>'+
+      '<input name="title" maxlength="60" required autocomplete="off" placeholder="'+esc(U.ownName)+'" aria-label="'+esc(U.ownName)+'">'+
+      '<textarea name="note" rows="2" maxlength="280" placeholder="'+esc(U.ownNote)+'" aria-label="'+esc(U.ownNote)+'"></textarea>'+
+      '<fieldset class="own-areas" aria-label="'+esc(U.ownArea)+'">'+groups.map((g,k)=>'<label><input type="radio" name="g" value="'+k+'"'+(k===state.area?' checked':'')+' aria-label="'+esc(g.title)+'">'+ball({g:k,shade:0})+'</label>').join('')+
+      '<output class="own-area-name">'+esc(groups[state.area].title)+'</output></fieldset>'+
       '<button class="primary">'+esc(U.ownMake)+'</button></form>');
     const form=detail.querySelector('form');
+    form.onchange=()=>{form.querySelector('.own-area-name').textContent=groups[+form.g.value].title};
     form.onsubmit=e=>{
       e.preventDefault();
       const title=form.title.value.trim().replace(/\s+/g,' ');
@@ -497,9 +506,10 @@ const Play=(()=>{
       '<header class="play-head"><div class="area-row"><p class="area-kicker"></p>'+
       '<button class="area-step" data-step="-1" aria-label="'+esc(U.areaPrev)+'">‹</button><button class="area-step" data-step="1" aria-label="'+esc(U.areaNext)+'">›</button></div>'+
       '<h1 tabindex="-1"></h1>'+
-      '<nav class="areas">'+groups.map((g,k)=>'<button class="area-dot" data-area="'+k+'" style="--tint:'+g.tint+'"><i></i></button>').join('')+'</nav>'+
+      '<nav class="areas">'+groups.map((g,k)=>'<button class="area-dot" data-area="'+k+'" style="--tint:'+g.tint+'">'+ball({g:k,shade:0})+'<i></i></button>').join('')+'</nav>'+
       '<p class="play-hint"></p></header>'+
       '<div class="play-shelves"></div>'+
+      '<button class="area-peek" data-step="-1" aria-label="'+esc(U.areaPrev)+'"></button><button class="area-peek" data-step="1" aria-label="'+esc(U.areaNext)+'"></button>'+
       '<svg class="play-art" aria-hidden="true"></svg>'+
       '<button class="play-jar"><span class="bottle" aria-hidden="true"><span class="bottle-inner"><span class="bottle-scale">'+bottleArt+'</span><span class="cork"></span></span></span>'+
       '<span class="jar-label"><span class="jar-name"></span><span class="jar-count">0</span></span><span class="jar-open">'+esc(U.jarOpen)+'</span></button>'+
@@ -512,7 +522,7 @@ const Play=(()=>{
     renderArea();remountJar();layout();refresh();hint(U.hintDrop,0);
     Track.send('game');
     for(const dot of stage.querySelectorAll('.area-dot'))dot.onclick=()=>setArea(+dot.dataset.area);
-    for(const b of stage.querySelectorAll('.area-step'))b.onclick=()=>setArea(state.area+ +b.dataset.step);
+    for(const b of stage.querySelectorAll('.area-step,.area-peek'))b.onclick=()=>setArea(state.area+ +b.dataset.step);
     stage.querySelector('.play-jar').onclick=openJar;
     stage.querySelector('.send-jar').onclick=openSend;
     // Swiping sideways anywhere on the page moves between areas. A swipe that starts on a marble or a button stays
@@ -525,7 +535,21 @@ const Play=(()=>{
       if(Math.abs(dx)>45&&Math.abs(dx)>1.5*Math.abs(dy))setArea(state.area+(dx<0?1:-1));
     };
     stage.onpointercancel=()=>{swipe=null};
+    // Nothing says that a marble holds a card, and a first visitor never tapped one. So the first marble shows it once:
+    // it hops, and its card opens. Not when a card has been read before, and not on top of another sheet.
+    if(!cardShown&&!state.read.size){
+      const mine=stage;
+      setTimeout(()=>{
+        const first=mine.querySelector('.pick:not(.add-own)');
+        if(stage!==mine||sheet.open||state.read.size||loose.size||!first)return;
+        cardShown=true;
+        const open=()=>{if(stage===mine&&!sheet.open)openIdea(byId(first.dataset.id))};
+        if(reduced.matches)open();
+        else first.querySelector('.ball').animate([{translate:'0 0',scale:'1'},{translate:'0 -16px',scale:'1.12',offset:.4},{translate:'0 0',scale:'1',offset:.8},{translate:'0 -4px',offset:.9},{translate:'0 0'}],{duration:620,easing:'ease-out'}).finished.then(open);
+      },1200);
+    }
   }
+  let cardShown=false;
   function unmount(){
     leaving?.cancel();leaving=null;
     if(state.step!==12){asked=false;try{sessionStorage.removeItem('idea-map-asked');sessionStorage.removeItem('idea-map-reached')}catch{}}   // leaving for the story: ask again next time

@@ -29,6 +29,7 @@ window.IDEA_MAP = {
     "worriedLevels": ["Not really", "A little", "Worried", "Very worried"],
     "iAm": "I am.",
     "iAmToo": "So am I.",
+    "iAmBut": "Well, but I am.",
     "whatIf": "What if…",
     "even": "But even if we keep control…",
     "transition": "…we still have to navigate the AI transition.",

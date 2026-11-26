@@ -124,12 +124,15 @@ function machine(stage,step){
       }
     }
     // The visitor has the marble: it is where they put it, and the run shivers more the closer it is to the edge.
-    let follow=pose,halo=null;
+    let follow=pose,halo=null,felt=0;
     if(step===2&&worry){
       worryStep(performance.now());
       const at=MarbleRun.ride(Math.min(worry.x,MarbleRun.brink+40));
       follow=worry.anchor;
-      pose={...pose,x:at.x,y:at.y,spin:(worry.x+115)*180/(19*Math.PI),tremor:.12+.88*worryLevel(worry.x)};
+      // The answer is felt while it is given: towards the edge the run shakes hard and cracks spread ahead of the marble,
+      // back up the slope it calms down and the cracks close again. (`front`: cracks left of this x are drawn.)
+      felt=worryLevel(worry.x);
+      pose={...pose,x:at.x,y:at.y,spin:(worry.x+115)*180/(19*Math.PI),tremor:.2+2.6*felt**1.4,front:MarbleRun.mix(170,MarbleRun.brink+130,felt)};
     }
     else if(step===2&&askedAt&&!reduced.matches){
       // Nobody is told to drag. The marble rocks on the spot instead, like something that wants to be picked up.
@@ -152,6 +155,7 @@ function machine(stage,step){
       el.setAttribute('stroke-dashoffset',1-grown);el.setAttribute('opacity',grown?.9:0);
     }
     stage.closest('.stage')?.classList.toggle('stressed',pose.stressReached);
+    stage.closest('.stage')?.style.setProperty('--worry',felt.toFixed(3));   // the page reddens and the answer grows with it (style.css)
     for(const [id,value] of Object.entries(MarbleRun.transforms(shown)))nodes.get(id).setAttribute('transform',value);
     for(const [id,value] of Object.entries(MarbleRun.fades(pose)))nodes.get(id).style.opacity=value;   // style, so the CSS transition softens a marble leaving
     const ring=nodes.get('halo');ring.setAttribute('opacity',halo?halo.opacity:0);
@@ -200,7 +204,10 @@ function machine(stage,step){
       button.style.top=((pose.y-cy)/height+.5)*100+'%';
       button.style.setProperty('--orb-size',38*rect.width/width+'px');
     }
-    lastCamera=[cx,cy,width];svg.setAttribute('viewBox',[cx-width/2,cy-height/2,width,height].join(' '));
+    lastCamera=[cx,cy,width];
+    // The picture itself jolts with the worry. Only the picture: lastCamera stays steady, or the marble would jitter under the finger.
+    if(felt&&!reduced.matches){const now=performance.now()/1000,k=width*felt*felt;cx+=.006*k*Math.sin(now*47);cy+=.009*k*Math.sin(now*61+1)}
+    svg.setAttribute('viewBox',[cx-width/2,cy-height/2,width,height].join(' '));
   }
   if(step===0){
     let previous=0,elapsed=0;
@@ -279,7 +286,7 @@ function story(){
   const kind=group?'station':s<=2?'opening':'';
   // The first danger is posed as a question: "I am." stands alone while the marble races down the drop, "What if…" then takes its place, and the answer appears as the marble bursts.
   // "I am." answers the question from the scene before, then the first danger follows.
-  const lead=s===3?'<span class="iam">'+esc(state.worried==='yes'?S.iAmToo:S.iAm)+'</span><span class="whatif">'+esc(S.whatIf)+'</span> ':'';
+  const lead=s===3?'<span class="iam">'+esc(state.worried==='yes'?S.iAmToo:state.worried==='no'?S.iAmBut:S.iAm)+'</span><span class="whatif">'+esc(S.whatIf)+'</span> ':'';
   const head='<h1 tabindex="-1" class="'+(s===2?'worry':'')+'">'+lead+(lead?'<span class="answer">'+title+'</span>':title)+'</h1>'+(body?'<p>'+lateWords(body)+'</p>':'')+
     (s===2?'<p class="answers"><span class="drag-hint">'+esc(S.worriedDrag)+'</span><b class="drag-level" aria-live="polite"></b></p>':'');
   let section=app.querySelector('.stage.machine');
