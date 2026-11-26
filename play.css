@@ -4,23 +4,23 @@
 
 /* header: which problem you are looking at, and how to move between the five */
 .play .play-head{display:block;padding:10px 18px 0;position:relative;z-index:2}
-.area-row{display:flex;align-items:center;gap:2px;height:36px}
-.play .area-kicker{margin:0 auto 0 0;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:color-mix(in srgb,var(--tint) 62%,#3b342c);transition:color .4s}
-.area-step{width:40px;height:40px;margin-right:-8px;border-radius:50%;font-size:25px;line-height:1;color:var(--ink);transition:color .2s,background .2s}
-.area-step:hover,.area-step:active{color:var(--ink);background:#efe6d9}
+
+
+
+
 .play .play-head h1{font-size:clamp(25px,7vw,31px);max-width:none;margin-top:0;line-height:1.1;letter-spacing:-.03em}
-.areas{display:flex;gap:5px;margin-top:10px}
-.area-dot{flex:1;height:26px;padding:0;display:flex;align-items:center}
-.area-dot i{display:block;position:relative;width:100%;height:4px;border-radius:2px;background:#e6dccd;overflow:hidden;transition:height .25s var(--motion-ease)}
-.area-dot i:after{content:"";position:absolute;inset:0;width:calc(var(--done,0)*100%);background:var(--tint);opacity:.5;border-radius:2px;transition:width .5s var(--motion-ease),opacity .3s}
-.area-dot.current i{height:6px;border-radius:3px;background:color-mix(in srgb,var(--tint) 22%,#eee5d8)}
-.area-dot.current i:after{opacity:1}
-.play .play-hint{margin:4px 0 0;font-size:13.5px;line-height:1.35;color:var(--muted);min-height:2.7em;transition:color .3s}
-.play .play-hint.nudge{color:#805020}
+
+
+
+
+
+
+
+
 
 /* shelves */
 .play-shelves{display:grid;gap:8px;padding:2px 12px 0;position:relative;z-index:2}
-.play .rail{position:relative;display:grid;grid-template-columns:repeat(var(--slots),minmax(0,1fr));gap:4px;padding:0 6px;isolation:isolate;align-items:start}
+.play .rail{position:relative;display:grid;grid-template-columns:repeat(var(--slots),calc((100% - (var(--cols,var(--slots)) - 1)*4px)/var(--cols,var(--slots))));justify-content:center;gap:4px;padding:0 6px;isolation:isolate;align-items:start}
 .play .rail:before{content:"";position:absolute;z-index:-1;inset:calc(var(--diam)*.52) 2% auto;height:calc(var(--diam)*.98);border-radius:0;
   background:transparent url("assets/porcelain-shelf.png") center/100% 100% no-repeat;box-shadow:none;filter:drop-shadow(0 5px 4px #8e786330)}
 .play .rail:after{display:none}
@@ -49,7 +49,8 @@
 .play-jar.filled .jar-count{background:var(--ink);color:#fff}
 .jar-open{font-size:11.5px;color:var(--muted);opacity:0;transition:opacity .4s}
 .play-jar.filled .jar-open{opacity:1}
-.cork{position:absolute;left:28%;top:-4.5%;width:44%;height:13%;border-radius:7px 7px 3px 3px;opacity:0;translate:0 -26px;pointer-events:none;
+/* The cork sits down in the mouth like a stopper (just proud of the rim), so the closed jar does not read as a head with a hat. */
+.cork{position:absolute;left:30%;top:1.5%;width:40%;height:8%;border-radius:5px 5px 3px 3px;opacity:0;translate:0 -26px;pointer-events:none;
   background:linear-gradient(90deg,#a97a4b,#dcb689 38%,#c79c6b 62%,#9a6c3f);box-shadow:inset 0 -3px 3px #6b47234d,0 2px 3px #54432d40;transition:opacity .3s,translate .45s cubic-bezier(.3,1.5,.5,1)}
 .play-jar.sealed .cork{opacity:1;translate:0 0}
 .jar-say{position:absolute;z-index:5;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);pointer-events:none;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis;
@@ -75,7 +76,7 @@
 .mast span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 @media(max-height:700px){
-  .play .play-hint{min-height:1.4em;font-size:12.5px}.areas{margin-top:4px}
+  
   .play-stage{--jar-scale:.78}.play .pick-name{-webkit-line-clamp:2}
 }
 
@@ -130,13 +131,14 @@
 .detail>.primary[data-card]{position:sticky;bottom:0;z-index:2;width:100%;margin-top:8px;box-shadow:0 36px 0 36px #f8f3ec,0 -10px 16px 8px #f8f3ecee}
 
 /* story: a way past the story */
-.controls .skip{color:var(--muted)}
+.controls .skip{color:var(--muted);margin-left:auto}
 .ask-nav{margin-top:22px}
 /* Back sits at the bottom of the screen, where the story and the marble page have it. */
 .ask-stage{min-height:100%;display:flex;flex-direction:column}
 .ask-nav{margin-top:auto}
-/* The rows share the free height: equal gaps between the heading, each row and Back (never less than 6px). */
-.ask-list{flex:1;align-content:space-evenly;margin-top:0;gap:6px;padding-block:6px}
+/* The rows stay together as one list right under the heading, with one even gap; spare height goes below them, above Back.
+   (Sharing the height out between the rows made the gaps larger than the rows on tall screens.) */
+.ask-list{margin-top:6px;gap:10px}
 @media(max-width:720px){.ask-stage{padding-bottom:24px}.ask-nav{margin-left:calc(7vw - 18px)}}
 /* Short phones: tighter rows, so the five questions and Back fit without scrolling. */
 @media(max-height:720px){.ask-row{min-height:52px;padding-block:6px}.ask-stage{padding-top:14px}}
@@ -145,9 +147,7 @@
 .answers{display:block;margin:14px 0 0;min-height:1.6em;opacity:0;transition:opacity .4s ease .3s}
 .headline:has(.held.shown) .answers{opacity:1}
 .drag-level{font-family:"Crete Round",Georgia,serif;font-weight:400;font-size:1.45em;color:#a32b36}
-.dragging .drag-hint{display:none}.drag-level{display:none}.dragging .drag-level{display:block}
-.drag-hint.nudge{animation:hint-nudge .7s ease-out}
-@keyframes hint-nudge{0%{color:#a32b36;translate:0 0}25%{translate:6px 0}50%{translate:-3px 0}100%{color:inherit;translate:0 0}}
+.drag-level{display:none}.dragging .drag-level{display:block}
 .stage:has(.held.shown) .illustration{touch-action:none}
 
 /* ---------- the ending: the jar has gone to Mareike ---------- */
@@ -159,3 +159,71 @@
 .finale .primary{display:flex;align-items:center;justify-content:center;margin-top:22px;text-decoration:none;max-width:320px}
 .finale .subtle{margin-top:6px;background:none;border:0}
 .play-stage.sent .send-jar,.play-stage.sent .play-back{visibility:hidden}
+
+/* A marble of the next and the previous problem looks in from the edges of the screen, level with the top shelf. */
+/* The button lies wholly inside the screen and clips its marble. (A button that sticks out past the edge makes the browser
+   scroll the whole page sideways when it takes the focus.) */
+.area-peek{position:absolute;z-index:3;top:var(--peek-y,150px);width:38px;height:48px;padding:0;overflow:hidden;translate:0 -50%;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.area-peek[data-step="-1"]{left:0}.area-peek[data-step="1"]{right:0}
+.area-peek .ball{--diam:40px;position:absolute;top:4px;left:0;translate:var(--out) 0}
+.area-peek[data-step="-1"] .ball{--out:-23px}.area-peek[data-step="1"] .ball{--out:21px}
+.play-stage.fresh .area-peek[data-step="1"] .ball{animation:peek-in 3.4s ease-in-out 2.5s infinite}
+@keyframes peek-in{0%,62%,100%{translate:21px 0;rotate:0deg}76%{translate:5px 0;rotate:-45deg}88%{translate:17px 0;rotate:-12deg}}
+.play-stage.sent .area-peek{display:none}
+@media(prefers-reduced-motion:reduce){.play-stage.fresh .area-peek .ball{animation:none}}
+/* Add your own: one compact sheet that never scrolls. On a phone it sits at the top, clear of the keyboard. */
+dialog:has(.own-form){overflow:hidden;max-height:none;padding:18px 20px 18px}
+@media(max-width:720px){dialog:has(.own-form){margin-top:max(12px,env(safe-area-inset-top))}}
+.own-form h2{display:flex;align-items:center;gap:10px;margin:0 34px 12px 0;font-size:22px}
+.own-form h2 .ball.own{--diam:30px;margin:0}
+.own-form input[name=title],.own-form textarea{margin-top:8px;resize:none}
+.own-areas{min-width:0;margin:14px 0 0;padding:0;border:0}
+.own-areas legend{padding:0;margin:0 0 8px;font-size:13.5px;color:#6f6a63}
+.own-area-choices{display:flex;align-items:center;gap:10px}
+.own-areas label{position:relative;display:block;margin:0;line-height:0;cursor:pointer}
+.own-areas input{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer}
+.own-areas .ball{--diam:30px;margin:0;opacity:.38;transition:opacity .2s,box-shadow .2s,translate .2s}
+.own-areas input:checked+.ball{opacity:1;translate:0 -3px;box-shadow:0 0 0 2px var(--studio),0 0 0 3.5px var(--ink)}
+.own-areas input:focus-visible+.ball{outline:2px solid var(--ink);outline-offset:4px}
+.own-area-name{display:block;margin-top:8px;font:400 15px/1.2 "Crete Round",Georgia,serif;color:color-mix(in srgb,var(--tint) 70%,#2a2622)}
+.own-form .primary{margin-top:14px}
+
+/* The one written hint, under "What would you like to talk about?": you can pick more than one. */
+.ask-sub{margin:10px 0 18px;color:#6f6a63}
+
+/* Where you are among the five problems: five dots in their colours above the shelves; the open one is a short bar.
+   A dot grows more opaque as its ideas are read (--done, set in refresh). Tapping a dot opens that problem. */
+.problem-dots{display:flex;justify-content:center;gap:4px;margin:0 0 4px}
+.problem-dots .dot{position:relative;width:24px;height:24px;padding:0}
+.problem-dots .dot:before{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;translate:-50% -50%;border-radius:4px;background:var(--tint);opacity:calc(.3 + .4*var(--done,0));transition:width .3s var(--motion-ease),opacity .3s}
+.problem-dots .dot.current:before{width:22px;opacity:1}
+/* Above the title, the question this screen answers; ‹ left and › right of the title step one problem along. The arrow glyphs are
+   centred on their ink, not their box (their ink sits ~4px low in the box), so they line up with the title. */
+.play .area-ask{margin:0 0 4px;font-size:14px;color:#7a746b;text-align:center}
+.area-title{display:flex;align-items:center;gap:2px;margin-inline:-10px}
+.area-title h1{flex:1;min-width:0;text-align:center}
+.area-step{flex:none;width:36px;height:36px;padding:0 0 4px;border-radius:50%;font:400 24px/1 "Average Sans",sans-serif;color:#9d968b;transition:color .2s,background .2s}
+.area-step:hover,.area-step:active{color:var(--ink);background:#efe6d9}
+/* The title gets air: away from the site bar above and from the top shelf below (less on short screens). */
+.play .play-head{padding-top:clamp(10px,3.2vh,28px)}
+.area-title{margin-bottom:clamp(4px,2.2vh,20px)}
+/* The visitor's name on the jar: an apothecary label (notched corners, a thin double frame in warm gold) on the upper
+   body, 36–56% of the jar's height, clear of the marbles that collect at the bottom. The name is set in a
+   high-contrast italic serif: Didot / Bodoni on Apple devices, Georgia elsewhere. */
+.jar-tag{position:absolute;left:15%;right:15%;top:36%;height:20%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 7%;
+  background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 210 78'><defs><linearGradient id='p' x1='0' x2='0' y1='0' y2='1'><stop offset='0' stop-color='%23fffcf4'/><stop offset='1' stop-color='%23f3ead9'/></linearGradient></defs><path d='M8 .5H202A7.5 7.5 0 0 0 209.5 8V70A7.5 7.5 0 0 0 202 77.5H8A7.5 7.5 0 0 0 .5 70V8A7.5 7.5 0 0 0 8 .5Z' fill='url(%23p)' stroke='%23c4ad86'/><path d='M12 4.5H198A7.5 7.5 0 0 0 205.5 12V66A7.5 7.5 0 0 0 198 73.5H12A7.5 7.5 0 0 0 4.5 66V12A7.5 7.5 0 0 0 12 4.5Z' fill='none' stroke='%23c4ad86' stroke-width='.7'/></svg>") center/100% 100% no-repeat;filter:drop-shadow(0 1px 1.2px #6e553738);rotate:-2deg;
+  font:italic 400 calc(18px*var(--jar-scale))/1.05 Didot,"Bodoni 72","Bodoni MT","Playfair Display",Georgia,serif;letter-spacing:.02em;color:#3b3027;
+  white-space:nowrap;pointer-events:none}
+/* Two lines: the name large in italic, "marbles" small in spaced capitals beneath. */
+.jar-tag b{font-weight:400;font-size:calc(100%*var(--fit,1));max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.jar-tag small{font:400 calc(7.5px*var(--jar-scale))/1 Didot,"Bodoni 72","Bodoni MT",Georgia,serif;letter-spacing:.28em;text-transform:uppercase;color:#8a7556;margin:calc(3px*var(--jar-scale)) 0 0 .28em}
+/* Only in the send animation (.sent, set by finale): once the cork is in, a red ribbon and bow are tied on, and then the
+   jar leaves. Not while filling, and not on a closed jar the visitor comes back to. */
+.jar-bow{position:absolute;inset:0;opacity:0;scale:.3;transform-origin:50% 14%;pointer-events:none;filter:drop-shadow(0 1.5px 1px #5a1a2240)}
+.jar-bow svg{display:block;width:100%;height:100%;overflow:visible}
+.play-stage.sent .play-jar.sealed .jar-bow{opacity:1;scale:1;transition:opacity .15s .55s,scale .55s cubic-bezier(.3,1.7,.5,1) .55s}
+.jar-tag[hidden],.jar-name[hidden]{display:none}
+/* Idea names always get room for two lines (and never more), so every shelf has the same height. */
+.play .pick-name{-webkit-line-clamp:2;min-height:calc(2em*1.18)}
+/* No count bubble under the jar: the marbles in it show it, and screen readers hear the count (aria-label on the jar). */
+.play .jar-count{display:none}

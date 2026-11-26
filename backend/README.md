@@ -14,6 +14,28 @@ in your own Google account: every sent jar becomes a row, and you get an email. 
 
 Test: send yourself a jar. A tab "Jars" appears in the sheet with one row, and you get an email.
 
+## Coffee invites: the jar as the agenda
+
+When a visitor chooses "Bring my jar to coffee" and books a time, their marbles are written into the calendar invite:
+the ideas they picked, then the ones they added themselves, then their note. Both of you see it in the event.
+
+One more step, once, after the set-up above:
+
+1. In the Apps Script editor, choose **setup** in the function list in the toolbar and press **Run**.
+2. Allow access to your calendar when Google asks.
+
+From then on the script looks at your calendar whenever it changes. It finds upcoming events whose guest has sent a
+coffee jar and puts the jar under whatever the booking page wrote.
+
+Good to know:
+
+- Jar and booking are matched by **email address**. The site asks for it before the calendar opens and tells the visitor
+  to book with the same one. A different address at booking means no agenda in that invite (the jar is still in the sheet).
+- Google does not email the guest again when the agenda is added. They see it when they open the event in their calendar.
+- If you already pasted `Code.gs` before this existed: paste the new version, then **Deploy → Manage deployments → Edit →
+  Version: New version**, then run **setup**.
+- Switch it off with `AGENDA = false` at the top of `Code.gs`.
+
 ## Optional: log what visitors look at
 
 Paste the same URL into `"trackEndpoint"` as well. Then every opened idea, every marble dropped and the answer to

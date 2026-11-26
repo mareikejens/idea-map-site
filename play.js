@@ -67,25 +67,39 @@ const Play=(()=>{
   function shelfRows(list){
     const items=[...list.map(i=>'<button class="pick" data-id="'+esc(i.id)+'">'+ball(i)+'<span class="pick-name">'+esc(i.title)+'</span></button>'),
       '<button class="pick add-own"><span class="ball own" aria-hidden="true"></span><span class="pick-name">'+esc(U.ownAdd)+'</span></button>'];
-    const shelves=Math.min(2,Math.ceil(items.length/3)),base=Math.floor(items.length/shelves),extra=items.length%shelves;
+    // Always two shelves, so the block is the same height for every problem (nothing below it moves when you switch).
+    // Both rows use the top row's column width; a shorter second row is centred under it.
+    const shelves=items.length>=2?2:1,base=Math.floor(items.length/shelves),extra=items.length%shelves,cols=base+(extra?1:0);
     let html='',at=0;
-    for(let k=0;k<shelves;k++){const n=base+(k<extra?1:0);html+='<div class="rail" style="--slots:'+n+'">'+items.slice(at,at+n).join('')+'</div>';at+=n}
+    for(let k=0;k<shelves;k++){const n=base+(k<extra?1:0);html+='<div class="rail" style="--slots:'+n+';--cols:'+cols+'">'+items.slice(at,at+n).join('')+'</div>';at+=n}
     return html;
   }
   function renderArea(){
     const g=groups[state.area],list=ideas.filter(i=>i.g===state.area&&!i.own);
-    stage.querySelector('.area-kicker').textContent=fill(U.areaOf,{n:state.area+1,total:groups.length});
     stage.querySelector('.play-head h1').textContent=g.title;
-    stage.querySelector('.play-shelves').innerHTML=shelfRows(list);
+    // The dots sit at the top of the shelves block, between the title and the top shelf.
+    stage.querySelector('.play-shelves').innerHTML=
+      '<nav class="problem-dots">'+groups.map((p,k)=>'<button class="dot" data-area="'+k+'" style="--tint:'+p.tint+'"></button>').join('')+'</nav>'+shelfRows(list);
+    for(const dot of stage.querySelectorAll('.problem-dots .dot'))dot.onclick=()=>setArea(+dot.dataset.area);
     stage.style.setProperty('--tint',g.tint);
     for(const b of stage.querySelectorAll('.pick:not(.add-own)'))bindPick(b);
     stage.querySelector('.add-own').onclick=()=>{Sound.wake();openOwn()};
     seenAreas.add(state.area);
+    // The shelves go on to both sides: a marble of the neighbouring problem looks in from each edge of the screen.
+    // Until the visitor has moved once, the one on the right keeps rolling in a little (play.css, "fresh").
+    for(const peek of stage.querySelectorAll('.area-peek'))peek.innerHTML=ball({g:(state.area+ +peek.dataset.step+groups.length)%groups.length,shade:0});
+    stage.classList.toggle('fresh',seenAreas.size<2);
   }
   function refresh(){
     const count=state.picked.size;
-    stage.querySelector('.jar-name').textContent=jarTitle();
+    // A named visitor's jar carries their name on a paper label (it moves with the jar); the line under it then shows
+    // only the count. Guests keep "Your jar" under the jar. The button says both to screen readers.
+    const tag=stage.querySelector('.jar-tag');tag.innerHTML=state.name?'<b>'+esc(named(U.jarTagName))+'</b><small>'+esc(U.jarTagWord)+'</small>':'';tag.hidden=!state.name;
+    // A long name shrinks to fit the label (down to 70%) before it is cut with "…".
+    const fit=tag.querySelector('b');if(fit){let k=1;tag.style.setProperty('--fit',1);while(fit.scrollWidth>fit.clientWidth+1&&k>.7){k-=.05;tag.style.setProperty('--fit',k.toFixed(2))}}
+    stage.querySelector('.jar-name').textContent=jarTitle();stage.querySelector('.jar-name').hidden=!!state.name;
     stage.querySelector('.jar-count').textContent=count;
+    stage.querySelector('.play-jar').setAttribute('aria-label',jarTitle()+', '+count);
     for(const b of stage.querySelectorAll('.pick')){
       b.classList.toggle('selected',state.picked.has(b.dataset.id));
       b.classList.toggle('away',loose.has(b.dataset.id));
@@ -103,10 +117,11 @@ const Play=(()=>{
     stage.querySelector('.play-jar').classList.toggle('sealed',sealed);
     stage.querySelector('.play-jar').classList.toggle('filled',count>0);
   }
-  function hint(text,hold=5200){
-    const p=stage.querySelector('.play-hint');clearTimeout(hintTimer);
-    p.textContent=text;p.classList.toggle('nudge',hold>0);
-    if(hold>0)hintTimer=setTimeout(()=>{if(stage){p.textContent=U.hintDrop;p.classList.remove('nudge')}},hold);
+  // No written hints on the page (visual cues only). The few moments that still deserve words are said to screen readers.
+  function hint(text){const p=stage.querySelector('.play-live');if(p)p.textContent=text}
+  function areaKeys(e){
+    if(!stage||sheet.open||e.altKey||e.ctrlKey||e.metaKey||e.target.closest?.('input,textarea,select'))return;
+    if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();setArea(state.area+(e.key==='ArrowRight'?1:-1))}
   }
   // Say something once, the first time it becomes relevant.
   function tell(key,text){if(told.has(key))return;told.add(key);hint(text,7000)}
@@ -124,7 +139,19 @@ const Play=(()=>{
   }
 
   // ---------- the physical world: walls, ramp, funnel and the jar, all in the stage's own pixels ----------
+  // All five titles share one size: the largest at which the longest one still fits on one line. So the title never
+  // wraps for one problem and not another, and nothing under it moves when you switch.
+  function fitTitle(){
+    const h=stage.querySelector('.play-head h1');h.style.fontSize='';h.style.whiteSpace='';
+    const cs=getComputedStyle(h),base=parseFloat(cs.fontSize),ls=parseFloat(cs.letterSpacing)||0,avail=h.clientWidth;
+    const c=fitTitle.ctx||(fitTitle.ctx=document.createElement('canvas').getContext('2d'));
+    c.font=cs.fontStyle+' '+cs.fontWeight+' '+base+'px '+cs.fontFamily;
+    const widest=Math.max(...groups.map(g=>c.measureText(g.title).width+ls*g.title.length));
+    const size=Math.max(19,Math.min(base,base*avail/widest*.97));
+    h.style.fontSize=size+'px';if(widest*size/base<=avail)h.style.whiteSpace='nowrap';
+  }
   function layout(){
+    fitTitle();
     const S=stage.getBoundingClientRect();W=S.width;H=S.height;
     const jr=stage.querySelector('.bottle').getBoundingClientRect(),s=jr.width/150,left=jr.left-S.left,top=jr.top-S.top;
     const at=(x,y)=>({x:left+x*s,y:top+y*s});
@@ -143,8 +170,11 @@ const Play=(()=>{
       layout.railY=x=>x<mouth.left?mouth.y-drop+drop*clamp(x/mouth.left,0,1):x>mouth.right?mouth.y-drop+drop*clamp((W-x)/(W-mouth.right),0,1):mouth.y;
       layout.funnelTop=mouth.y-drop-30;
       // Above the funnel, one sloped ramp turns the screen into a small marble run: the marble rolls one way, drops, rolls back.
-      // It is left out when there is no room between the shelves and the funnel (small phones, full shelves).
-      const shelves=stage.querySelector('.play-shelves').getBoundingClientRect(),first=shelves.bottom-S.top+34,reach=W-84,rise=reach*.33;
+      // It reaches a little past the middle (so it drops onto the far funnel rail) and sits halfway between the shelves and
+      // the funnel, with equal room above and below. It is left out when there is no room (small phones, full shelves).
+      const shelves=stage.querySelector('.play-shelves').getBoundingClientRect(),reach=W*.6,rise=reach*.33,
+        room=(mouth.y-drop)-(shelves.bottom-S.top),first=shelves.bottom-S.top+Math.max(34,(room-rise)/2);
+      stage.style.setProperty('--peek-y',(stage.querySelector('.pick .ball').getBoundingClientRect().top-S.top+parseFloat(getComputedStyle(stage).getPropertyValue('--diam'))/2)+'px');   // level with the marbles on the top shelf
       for(let k=0,y=first;k<1&&y+rise<=mouth.y-drop-30;k++,y+=rise+62){
         const fromLeft=k%2===0,a={x:fromLeft?-4:W+4,y},b={x:fromLeft?reach:W-reach,y:y+rise};
         add(bar(a,b,7,{restitution:.25}),'rail');svg+='<line class="rail-line" x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'"/>';
@@ -322,12 +352,18 @@ const Play=(()=>{
   }
   function openOwn(){
     if(state.own.length>=5)return hint(U.ownFull,6000);
-    openSheet('<form class="detail own-form" novalidate><span class="ball own" aria-hidden="true"></span><h2>'+esc(U.ownTitle)+'</h2><p>'+esc(U.ownIntro)+'</p>'+
-      '<label>'+esc(U.ownName)+'<input name="title" maxlength="60" required autocomplete="off"></label>'+
-      '<label>'+esc(U.ownNote)+'<textarea name="note" rows="3" maxlength="280"></textarea></label>'+
-      '<label>'+esc(U.ownArea)+'<select name="g">'+groups.map((g,k)=>'<option value="'+k+'"'+(k===state.area?' selected':'')+'>'+esc(g.title)+'</option>').join('')+'</select></label>'+
+    // Everything fits above a phone keyboard without scrolling, so the button is always in view: no intro text, the field
+    // names sit inside the fields, and the problem is chosen by its marble instead of from a list.
+    openSheet('<form class="detail own-form" novalidate><h2><span class="ball own" aria-hidden="true"></span>'+esc(U.ownTitle)+'</h2>'+
+      '<input name="title" maxlength="60" required autocomplete="off" placeholder="'+esc(U.ownName)+'" aria-label="'+esc(U.ownName)+'">'+
+      '<textarea name="note" rows="2" maxlength="280" placeholder="'+esc(U.ownNote)+'" aria-label="'+esc(U.ownNote)+'"></textarea>'+
+      // The problem: the question is the field's visible label, the five marbles are the choices, and the chosen
+      // problem is named under them in its colour (the chosen marble is lifted).
+      '<fieldset class="own-areas"><legend>'+esc(U.ownArea)+'</legend><div class="own-area-choices">'+groups.map((g,k)=>'<label><input type="radio" name="g" value="'+k+'"'+(k===state.area?' checked':'')+' aria-label="'+esc(g.title)+'">'+ball({g:k,shade:0})+'</label>').join('')+'</div>'+
+      '<output class="own-area-name" style="--tint:'+groups[state.area].tint+'">'+esc(groups[state.area].title)+'</output></fieldset>'+
       '<button class="primary">'+esc(U.ownMake)+'</button></form>');
     const form=detail.querySelector('form');
+    form.onchange=()=>{const out=form.querySelector('.own-area-name'),g=groups[+form.g.value];out.textContent=g.title;out.style.setProperty('--tint',g.tint)};
     form.onsubmit=e=>{
       e.preventDefault();
       const title=form.title.value.trim().replace(/\s+/g,' ');
@@ -372,12 +408,17 @@ const Play=(()=>{
       '<label class="hp" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>'+
       '<button class="primary">'+esc(sealed?U.sendAgain:U.sendButton)+'</button>'+
       (booking?'<p class="send-or">'+esc(U.sendOr)+'</p><button type="button" class="coffee">'+esc(U.coffee)+'</button><p class="coffee-hint">'+esc(U.coffeeHint)+'</p>':'')+
-      '<p class="send-status" role="status">'+(sealed?esc(U.sendDone):'')+'</p><p class="fine">'+esc(U.sendPrivacy)+'</p></form>');
+      '<p class="send-status" role="status">'+(sealed?esc(U.sendDone):'')+'</p><p class="fine">'+esc(U.sendPrivacy)+' '+legalLink()+'</p></form>');
     const form=detail.querySelector('form');
     form.onsubmit=e=>{e.preventDefault();send(form,false)};
     form.email.oninput=()=>{form.querySelector('.send-status').textContent=''};
     const coffee=form.querySelector('.coffee');
     if(coffee)coffee.onclick=()=>{
+      // With a backend the jar is written into the calendar invite, and the email address is what links the two (backend/Code.gs).
+      // So it is asked for before the calendar opens.
+      if(window.IDEA_MAP.send?.endpoint&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.value.trim())){
+        form.querySelector('.send-status').textContent=U.coffeeNeedEmail;form.email.focus();return;
+      }
       // Open the calendar straight away, inside the click, or the browser blocks it as a pop-up. The jar follows in the background.
       window.open(booking,'_blank','noopener');send(form,true);
     };
@@ -386,7 +427,7 @@ const Play=(()=>{
   async function send(form,coffee){
     const status=form.querySelector('.send-status'),button=form.querySelector('.primary'),email=form.email.value.trim(),name=form.elements.name?.value.trim().replace(/\s+/g,' ');   // form.name alone would be the form's own name attribute
     const valid=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    // Over coffee the calendar asks for the email itself, so here it is optional. A plain send needs one to get a reply.
+    // A plain send needs an email to get a reply. Over coffee it is checked before the calendar opens (see openSend); without a backend it stays optional.
     if(!valid&&(!coffee||email)){status.textContent=U.sendNeedEmail;form.email.focus();return}
     if(name){state.fullName=name;state.name=name.split(' ')[0]}
     if(valid)state.email=email;
@@ -446,13 +487,13 @@ const Play=(()=>{
     card.querySelector('button').onclick=()=>endFinale();
     if(reduced.matches)return;
     const soft='cubic-bezier(.2,.8,.2,1)';
-    // 1. cork in (the "sealed" style), 2. the jar dips as if picked up and leaves through the top, 3. the page clears,
+    // 1. cork in, then the gift bow tied on (the "sealed" and "sent" styles), 2. the jar dips as if picked up and leaves through the top, 3. the page clears,
     // 4. Mareike is there, 5. the words.
-    leaving=jar.animate([{transform:'none'},{transform:'translateY(9px)',offset:.2,easing:'cubic-bezier(.55,0,.9,.45)'},{transform:'translateY(-125vh) rotate(7deg)'}],{duration:1300,delay:600,fill:'forwards'});
-    card.animate([{opacity:0},{opacity:1}],{duration:450,delay:1250,fill:'backwards'});
-    card.querySelector('.meet-host').animate([{opacity:0,transform:'scale(.82)'},{opacity:1,transform:'none'}],{duration:620,delay:1550,easing:soft,fill:'backwards'});
+    leaving=jar.animate([{transform:'none'},{transform:'translateY(9px)',offset:.2,easing:'cubic-bezier(.55,0,.9,.45)'},{transform:'translateY(-125vh) rotate(7deg)'}],{duration:1300,delay:1150,fill:'forwards'});
+    card.animate([{opacity:0},{opacity:1}],{duration:450,delay:1800,fill:'backwards'});
+    card.querySelector('.meet-host').animate([{opacity:0,transform:'scale(.82)'},{opacity:1,transform:'none'}],{duration:620,delay:2100,easing:soft,fill:'backwards'});
     for(const [n,el] of [...card.querySelectorAll('h2,p,.primary,.subtle')].entries())
-      el.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:480,delay:2050+n*110,easing:'ease-out',fill:'backwards'});
+      el.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:480,delay:2600+n*110,easing:'ease-out',fill:'backwards'});
   }
   function endFinale(quiet){
     leaving?.cancel();leaving=null;
@@ -471,6 +512,8 @@ const Play=(()=>{
   function ask(){
     const row=(k,title,sub,marble)=>'<button class="ask-row" data-ask="'+k+'">'+marble+'<span class="ask-text"><b>'+esc(title)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</span><i aria-hidden="true">›</i></button>';
     app.innerHTML='<section class="world play ask"><div class="ask-stage"><h1 tabindex="-1">'+esc(state.name?named(U.askTitleNamed):U.askTitle)+'</h1>'+
+      // The one written hint on the site, by choice: tapping a row looks like a single answer, but the jar takes as many as you like.
+      (U.askBody?'<p class="ask-sub">'+esc(U.askBody)+'</p>':'')+
       '<div class="ask-list">'+groups.map((g,k)=>row(k,g.title,'',ball({g:k,shade:0}))).join('')+
       row('own',U.askOther,U.askOtherHint,'<span class="ball own" aria-hidden="true"></span>')+'</div>'+
       '<nav class="ask-nav"><button class="subtle" data-action="back">'+esc(U.back)+'</button></nav></div></section>';   // app.js handles data-action="back"
@@ -489,14 +532,15 @@ const Play=(()=>{
     try{sessionStorage.setItem('idea-map-reached','yes')}catch{}       // a reload brings the visitor back here (see the end of app.js)
     if(!asked)return ask();
     app.innerHTML='<section class="world play"><div class="play-stage">'+
-      '<header class="play-head"><div class="area-row"><p class="area-kicker"></p>'+
-      '<button class="area-step" data-step="-1" aria-label="'+esc(U.areaPrev)+'">‹</button><button class="area-step" data-step="1" aria-label="'+esc(U.areaNext)+'">›</button></div>'+
-      '<h1 tabindex="-1"></h1>'+
-      '<nav class="areas">'+groups.map((g,k)=>'<button class="area-dot" data-area="'+k+'" style="--tint:'+g.tint+'"><i></i></button>').join('')+'</nav>'+
-      '<p class="play-hint"></p></header>'+
+      // One way to move between the five problems: they lie side by side. A marble of the next one looks in at each
+      // edge (tap it, swipe, or ← →), and five dots in the problem colours under the shelves, with a faint ‹ › either
+      // side, say where you are. No counter, no tab row, no written hint (see renderArea and the end of mount).
+      '<header class="play-head"><p class="area-ask">'+esc(U.areaAsk)+'</p><div class="area-title"><button class="area-step" data-step="-1" aria-label="'+esc(U.areaPrev)+'">‹</button>'+
+      '<h1 tabindex="-1"></h1><button class="area-step" data-step="1" aria-label="'+esc(U.areaNext)+'">›</button></div></header>'+
       '<div class="play-shelves"></div>'+
+      '<button class="area-peek" data-step="-1" aria-label="'+esc(U.areaPrev)+'"></button><button class="area-peek" data-step="1" aria-label="'+esc(U.areaNext)+'"></button>'+
       '<svg class="play-art" aria-hidden="true"></svg>'+
-      '<button class="play-jar"><span class="bottle" aria-hidden="true"><span class="bottle-inner"><span class="bottle-scale">'+bottleArt+'</span><span class="cork"></span></span></span>'+
+      '<button class="play-jar"><span class="bottle" aria-hidden="true"><span class="bottle-inner"><span class="bottle-scale">'+bottleArt+'</span><span class="cork"></span><span class="jar-tag"></span>'+'<span class="jar-bow"><svg viewBox="0 0 150 196"><defs><linearGradient id="ribbon" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#c8414c"/><stop offset="1" stop-color="#8f2430"/></linearGradient></defs><path d="M38 24.5 Q75 28 112 24.5 L112 30.5 Q75 34 38 30.5 Z" fill="url(#ribbon)"/><g transform="translate(104 27.5) rotate(22) scale(1.2) translate(-75 -28)"><path d="M73 30 L63 53 L67.5 50 L70 54.5 L76.5 31 Z M77 30 L87 52 L82.5 49.5 L80 54 L73.5 31 Z" fill="#9e2a35"/><path d="M75 28 C61 11 43 15 49 26 C53 33 66 31 75 28 Z M75 28 C89 11 107 15 101 26 C97 33 84 31 75 28 Z" fill="url(#ribbon)"/><path d="M74 27.5 C64 18 53 19 54 25 M76 27.5 C86 18 97 19 96 25" fill="none" stroke="#7c1c27" stroke-width="1.1" stroke-linecap="round" opacity=".55"/><path d="M58 19.5 C62 17.5 66 19 69 22 M92 19.5 C88 17.5 84 19 81 22" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".35"/><ellipse cx="75" cy="28.3" rx="5.2" ry="4.4" fill="#a92f3a"/><ellipse cx="74" cy="27" rx="2.2" ry="1.3" fill="#fff" opacity=".3"/></g></svg></span>'+'</span></span>'+
       '<span class="jar-label"><span class="jar-name"></span><span class="jar-count">0</span></span><span class="jar-open">'+esc(U.jarOpen)+'</span></button>'+
       '<button class="play-back subtle" data-action="restart">'+esc(U.back)+'</button>'+
       '<button class="send-jar primary" hidden></button>'+
@@ -504,10 +548,12 @@ const Play=(()=>{
     stage=app.querySelector('.play-stage');art=stage.querySelector('.play-art');
     engine=Engine.create({gravity:{x:0,y:GRAVITY},positionIterations:8});statics=[];
     Events.on(engine,'collisionStart',collide);
-    renderArea();remountJar();layout();refresh();hint(U.hintDrop,0);
+    renderArea();remountJar();layout();refresh();
+    document.fonts?.ready.then(()=>{if(stage)layout()});
     Track.send('game');
-    for(const dot of stage.querySelectorAll('.area-dot'))dot.onclick=()=>setArea(+dot.dataset.area);
-    for(const b of stage.querySelectorAll('.area-step'))b.onclick=()=>setArea(state.area+ +b.dataset.step);
+    for(const b of stage.querySelectorAll('.area-peek,.area-step'))b.onclick=()=>setArea(state.area+ +b.dataset.step);
+    // ← → move between the problems too (the story's own arrow keys stop before this screen).
+    document.removeEventListener('keydown',areaKeys);document.addEventListener('keydown',areaKeys);
     stage.querySelector('.play-jar').onclick=openJar;
     stage.querySelector('.send-jar').onclick=openSend;
     // Swiping sideways anywhere on the page moves between areas. A swipe that starts on a marble or a button stays
@@ -520,12 +566,25 @@ const Play=(()=>{
       if(Math.abs(dx)>45&&Math.abs(dx)>1.5*Math.abs(dy))setArea(state.area+(dx<0?1:-1));
     };
     stage.onpointercancel=()=>{swipe=null};
+    // Nothing says that a marble holds a card, and a first visitor never tapped one. So the first marble hops once,
+    // a visual invitation to tap it. It does not open its card by itself: a card appearing unasked confused visitors.
+    if(!cardShown&&!state.read.size&&!reduced.matches){
+      const mine=stage;
+      setTimeout(()=>{
+        const first=mine.querySelector('.pick:not(.add-own)');
+        if(stage!==mine||sheet.open||state.read.size||loose.size||!first)return;
+        cardShown=true;
+        first.querySelector('.ball').animate([{translate:'0 0',scale:'1'},{translate:'0 -16px',scale:'1.12',offset:.4},{translate:'0 0',scale:'1',offset:.8},{translate:'0 -4px',offset:.9},{translate:'0 0'}],{duration:620,easing:'ease-out'});
+      },1200);
+    }
   }
+  let cardShown=false;
   function unmount(){
     leaving?.cancel();leaving=null;
     if(state.step!==12){asked=false;try{sessionStorage.removeItem('idea-map-asked');sessionStorage.removeItem('idea-map-reached')}catch{}}   // leaving for the story: ask again next time
     if(!stage)return;
     cancelAnimationFrame(frame);frame=0;clearTimeout(hintTimer);loose.clear();stage=null;engine=null;
+    document.removeEventListener('keydown',areaKeys);
     document.querySelector('#mastTools').innerHTML='';
   }
   sheet.addEventListener('close',closeCard);

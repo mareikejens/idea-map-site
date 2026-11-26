@@ -29,7 +29,7 @@
 .stage,.world:has(.flood),.world.named{cursor:pointer}.station .headline{text-align:center;width:100%;max-width:none}.station .headline p{margin-inline:auto}.beat{color:inherit;font-weight:inherit}.stressed .beat{color:#a32b36;text-decoration:underline;text-decoration-thickness:.065em;text-underline-offset:.14em}.keyboard-next:not(:focus-visible){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0}.keyboard-next:focus-visible{margin-left:auto;padding:9px 18px}.controls .pause{margin-left:auto}
 @font-face{font-family:"Crete Round";src:url("assets/fonts/CreteRound-Regular.ttf") format("truetype");font-style:normal;font-weight:400;font-display:swap}
 .mast span,h1,.welcome h1,.world h1,.detail h2{font-family:"Crete Round",Georgia,serif;font-weight:400;letter-spacing:-.025em}
-.opening{position:relative;isolation:isolate;overflow:hidden;background:#f6efe7}.opening .illustration{position:absolute;inset:0;min-height:0;z-index:-2}.opening .illustration svg{position:absolute;inset:0;width:100%;height:100%;margin:0;mix-blend-mode:normal}.opening:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(95deg,#fbf7f1f5 0%,#faf5eedc 24%,#faf5ee45 53%,transparent 75%)}.welcome.opening{display:flex;align-items:center;padding:5vh 7vw;text-align:left}.welcome-copy{width:min(390px,90vw)}.welcome-copy img{width:clamp(100px,13vw,166px);height:auto;aspect-ratio:1;margin:0 0 24px;border-width:3px}.welcome h1{font-size:var(--heading)}.welcome h1 span{color:var(--ink)}.welcome-copy form{margin-top:25px}.welcome-copy label{color:var(--ink)}.welcome-copy .namebox{margin:0;width:min(310px,80vw)}.welcome-copy input{text-align:left;padding-right:56px}.welcome-copy .start{right:0;background:#292928;color:white;border:0;box-shadow:none}.opening .headline{padding-top:13vh;max-width:min(770px,72vw)}.opening .headline h1{font-size:clamp(38px,5.4vw,77px);line-height:1.04}.opening .controls{margin-top:auto}
+.opening{position:relative;isolation:isolate;overflow:hidden;background:#f6efe7}.opening .illustration{position:absolute;inset:0;min-height:0;z-index:-2}.opening .illustration svg{position:absolute;inset:0;width:100%;height:100%;margin:0;mix-blend-mode:normal}.opening:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(95deg,#fbf7f1f5 0%,#faf5eedc 24%,#faf5ee45 53%,transparent 75%)}.welcome.opening{display:flex;align-items:center;padding:5vh 7vw;text-align:left}.welcome-copy{width:min(390px,90vw)}.welcome-copy img{width:clamp(100px,13vw,166px);height:auto;aspect-ratio:1;margin:0 0 24px;border-width:3px}.welcome h1{font-size:var(--heading)}.welcome h1 span{color:var(--ink)}.welcome-copy form{margin-top:25px}.welcome-copy label{color:var(--ink)}.welcome-copy .namebox{margin:0;width:min(310px,80vw)}.welcome-copy input{text-align:left;padding-right:56px}.welcome-copy .start{right:0;background:#292928;color:white;border:0;box-shadow:none}.opening .headline{padding-top:13vh;max-width:min(840px,72vw)}.opening .headline h1{font-size:clamp(38px,5.4vw,77px);line-height:1.04}.opening .controls{margin-top:auto}
 @media(max-width:700px){.welcome.opening{align-items:flex-start;padding-top:3vh}.welcome-copy img{width:96px;margin-bottom:12px}.welcome-copy form{margin-top:14px}.opening:before{background:linear-gradient(#faf5eeef 2%,#faf5eeeb 34%,#faf5ee55 52%,transparent 68%)}.opening .headline{max-width:100%;padding-top:8vh}.welcome h1{font-size:26px}}
 .welcome.opening{justify-content:flex-start}
 /* The sculpture and its motion use the same viewport from cover to rewind. */
@@ -111,20 +111,26 @@ dialog{background:var(--studio);border:1px solid #e2d8c8;box-shadow:0 20px 80px 
 /* Between scenes the words fade out before the next line fades in (ink-in restarts when .leaving comes off). */
 .headline.leaving{animation:none;opacity:0;translate:0 -4px;transition:opacity .2s ease,translate .2s ease}
 @media(prefers-reduced-motion:no-preference){
-  /* "I am." has the screen to itself, at full headline size, while the marble races down. It then gives
-     its place to "What if…" (it lies over that line, so nothing jumps), just before the burst. */
+  /* "I am." has the screen to itself, at full headline size, while the marble starts down the drop. Partway down it
+     gives its place to "What if…" (it lies over that line, so nothing jumps), which builds while the marble races to
+     the break. The swap follows the marble, not a clock: app.js sets .whatif-now from the scene's progress. */
   .headline h1:has(.iam){position:relative}
-  .iam{position:absolute;inset:0 0 auto;animation:iam-out .25s 1.45s both}
-  @keyframes iam-out{to{opacity:0}}
-  .iam+.whatif{animation:late-in .35s 1.75s both}
+  .iam{position:absolute;inset:0 0 auto;transition:opacity .25s ease}
+  .whatif-now .iam{opacity:0}
+  .iam+.whatif{opacity:0;transition:opacity .35s ease .12s}
+  .whatif-now .iam+.whatif{opacity:1}
   /* A [bracketed] word in the body line lands a beat after the sentence, like a spoken pause. */
-  .headline .late{opacity:0;transition:opacity .18s ease}.headline .late.now{opacity:1}
+  /* "Fast." lands with a punch on the frame the marble is pushed (see surge in motion.js), not a soft fade. */
+  .headline .late{display:inline-block;opacity:0}.headline .late.now{opacity:1;animation:fast-in .32s cubic-bezier(.2,1.7,.45,1) both}
+  @keyframes fast-in{from{opacity:0;transform:translateX(-10px) scale(.7)}to{opacity:1;transform:none}}
   @keyframes late-in{from{opacity:0}to{opacity:1}}
   /* Cover → run → marble field → shelves: a cross-fade between whole screens. */
   ::view-transition-old(root),::view-transition-new(root){animation-duration:.55s;animation-timing-function:ease}
 }
 /* Narrow cover: the name field carries the marble run, so the copy sits low and the run lands about two thirds down, where the story scenes hold it. */
 @media(max-width:700px){.welcome.opening{align-items:flex-end;padding-bottom:30svh}}
+/* Story headlines keep line breaks typed in content.js ("Transformative AI\nis coming."). */
+.headline h1{white-space:pre-line}
 /* About card: the portrait leads, sized to the card. Line breaks typed in content.js are kept. */
 .about .portrait{width:clamp(120px,34vw,168px);height:auto;aspect-ratio:1;border-width:4px;margin-bottom:22px}
 .about p{white-space:pre-line}
@@ -141,8 +147,8 @@ dialog{background:var(--studio);border:1px solid #e2d8c8;box-shadow:0 20px 80px 
 .headline:has(.iam) .answer{display:block;margin-top:.12em}
 .answer,.headline:has(.whatif) p{opacity:0;transition:opacity .4s ease}
 .stressed .answer,.stressed .headline:has(.whatif) p{opacity:1}
-/* Tension: after the burst the screen holds on "What if…" for a moment before the answer lands, and the question follows it. */
-.stressed .answer{transition-delay:.55s}.stressed .headline:has(.whatif) p{transition-delay:.95s}
+/* The burst answers "What if…": the danger lands right after it, while the pieces still fly. */
+.stressed .answer{transition-delay:.18s}.stressed .headline:has(.whatif) p{transition-delay:.18s}
 
 /* ---- Marble page ----
    Marbles are cut to clean circles with a soft shadow and arrive spreading out from the first one. After about a second they part
@@ -235,3 +241,17 @@ html{overscroll-behavior-y:none}
 /* The Back button sits in the same spot on every screen: the story, the marble page and the question before the game. */
 .world:has(.flood) .controls{padding:24px 7vw 30px}
 @media(max-width:720px){.world:has(.flood) .controls{padding:18px 7vw 24px}}
+
+/* No zoom on a double tap (pinch still works), and no text selection in the story: a fast second tap is just "continue". */
+html{touch-action:manipulation}.machine{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+/* "Are you worried?": the closer the marble is dragged to the edge (--worry, 0 to 1, set in app.js), the redder the page. */
+.machine .illustration{box-shadow:inset 0 0 calc(var(--worry,0)*150px) calc(var(--worry,0)*26px) #a32b3659}
+.drag-level{transform-origin:0 50%;scale:calc(1 + var(--worry,0)*.5);transition:scale .15s linear}
+
+/* The privacy link: small and quiet, on the About card and under the send form. */
+.legal-link{font:inherit;font-size:10px;color:#b0a99d;padding:2px 0;text-decoration:underline;text-decoration-color:#e6dfd4;text-underline-offset:2px}.legal-link:hover{color:#8c877f}.about .legal-link{display:block;margin-top:4px}.fine .legal-link{font-size:inherit}
+.legal-text h3{margin:16px 0 3px;font-size:14px;font-weight:600}.legal-text p{margin:0 0 6px;font-size:14px;line-height:1.45}
+
+/* Desktop about card: wide enough (37em of text, so it scales with the font) that the lead takes two lines and
+   "Based in Zürich…" one. The phone card keeps its own width (max-width:700px rule above). */
+@media(min-width:701px){dialog:has(.about){width:min(calc(37em + 70px),93vw)}}
