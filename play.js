@@ -378,6 +378,11 @@ const Play=(()=>{
     form.email.oninput=()=>{form.querySelector('.send-status').textContent=''};
     const coffee=form.querySelector('.coffee');
     if(coffee)coffee.onclick=()=>{
+      // With a backend the jar is written into the calendar invite, and the email address is what links the two (backend/Code.gs).
+      // So it is asked for before the calendar opens.
+      if(window.IDEA_MAP.send?.endpoint&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.value.trim())){
+        form.querySelector('.send-status').textContent=U.coffeeNeedEmail;form.email.focus();return;
+      }
       // Open the calendar straight away, inside the click, or the browser blocks it as a pop-up. The jar follows in the background.
       window.open(booking,'_blank','noopener');send(form,true);
     };
@@ -386,7 +391,7 @@ const Play=(()=>{
   async function send(form,coffee){
     const status=form.querySelector('.send-status'),button=form.querySelector('.primary'),email=form.email.value.trim(),name=form.elements.name?.value.trim().replace(/\s+/g,' ');   // form.name alone would be the form's own name attribute
     const valid=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    // Over coffee the calendar asks for the email itself, so here it is optional. A plain send needs one to get a reply.
+    // A plain send needs an email to get a reply. Over coffee it is checked before the calendar opens (see openSend); without a backend it stays optional.
     if(!valid&&(!coffee||email)){status.textContent=U.sendNeedEmail;form.email.focus();return}
     if(name){state.fullName=name;state.name=name.split(' ')[0]}
     if(valid)state.email=email;
