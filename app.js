@@ -103,7 +103,7 @@ function machine(stage,step){
   const entryPose=carried&&from>0?lastPose:null;
   // Breaking and mending are one clock run in two directions: pick it up wherever the other scene left it.
   const f0=!entryPose?0:step===4&&from===3?1-entryPose.breakage:step===3&&from===4?MarbleRun.fall.start+(1-MarbleRun.fall.start)*MarbleRun.clamp((entryPose.breakage-MarbleRun.fall.from)/(1-MarbleRun.fall.from)):0;
-  const duration=Math.max(700,[0,3800,3400,2800,2400,2700,4800,4000,3700,4400][step]*(1-f0));
+  const duration=Math.max(700,[0,3800,3400,2800,2400,2700,4000,4000,3700,4400][step]*(1-f0));
   // A scene left early hands its marble over: for half a second the pose glides from where it was to where it belongs.
   const joinSpan=f0?0:MarbleRun.clamp(520/duration);
   // "I am." and the marble goes: only a breath at the brink while the words change, then it races down the drop.
@@ -153,7 +153,7 @@ function machine(stage,step){
     }
     stage.closest('.stage')?.classList.toggle('stressed',pose.stressReached);
     for(const [id,value] of Object.entries(MarbleRun.transforms(shown)))nodes.get(id).setAttribute('transform',value);
-    for(const [id,value] of Object.entries(MarbleRun.fades(pose)))nodes.get(id).setAttribute('opacity',value);
+    for(const [id,value] of Object.entries(MarbleRun.fades(pose)))nodes.get(id).style.opacity=value;   // style, so the CSS transition softens a marble leaving
     const ring=nodes.get('halo');ring.setAttribute('opacity',halo?halo.opacity:0);
     if(halo)ring.setAttribute('transform','translate('+halo.x.toFixed(2)+' '+halo.y.toFixed(2)+') scale('+halo.scale.toFixed(3)+')');
     const rect=stage.getBoundingClientRect(),mobile=rect.width<700;
@@ -414,7 +414,7 @@ function flood(origin){
   cancelAnimationFrame(raf);
   if(reduced.matches){stage.classList.add('settled','asked');world.classList.add('ready')}
   if(origin&&!reduced.matches){
-    const seed=app.querySelector('[data-seed="equity-1"]');
+    const seed=app.querySelector('[data-seed="thinking-1"]');   // a blue one, like the marble of the run
     const img=seed?.querySelector('img'),dest=seed?.getBoundingClientRect();
     if(img&&dest)img.animate([
       {transformOrigin:'top left',transform:'translate('+(origin.left-dest.left)+'px,'+(origin.top-dest.top)+'px) scale('+origin.width/dest.width+')'},
@@ -466,7 +466,7 @@ function handover(swap){
 let booted=false;
 function go(n,after){
   const from=state.step;
-  const source=from===9&&n===10?app.querySelector('#mate3 image'):null;
+  const source=from===9&&n===10?app.querySelector('#mate2 image'):null;
   const handoff=source?source.getBoundingClientRect():null;
   if(n===11)n=from===12?10:12;                 // step 11 (the plain list) is retired: the flood leads straight into the game
   n=Math.max(0,Math.min(12,n));
