@@ -75,9 +75,9 @@ const Play=(()=>{
   function renderArea(){
     const g=groups[state.area],list=ideas.filter(i=>i.g===state.area&&!i.own);
     stage.querySelector('.play-head h1').textContent=g.title;
-    // The dots live inside the shelves block, so the ramp and the physics (which measure from its bottom) stay clear of them.
-    stage.querySelector('.play-shelves').innerHTML=shelfRows(list)+
-      '<nav class="problem-dots">'+groups.map((p,k)=>'<button class="dot" data-area="'+k+'" style="--tint:'+p.tint+'"></button>').join('')+'</nav>';
+    // The dots sit at the top of the shelves block, between the title and the top shelf.
+    stage.querySelector('.play-shelves').innerHTML=
+      '<nav class="problem-dots">'+groups.map((p,k)=>'<button class="dot" data-area="'+k+'" style="--tint:'+p.tint+'"></button>').join('')+'</nav>'+shelfRows(list);
     for(const dot of stage.querySelectorAll('.problem-dots .dot'))dot.onclick=()=>setArea(+dot.dataset.area);
     stage.style.setProperty('--tint',g.tint);
     for(const b of stage.querySelectorAll('.pick:not(.add-own)'))bindPick(b);
@@ -92,7 +92,9 @@ const Play=(()=>{
     const count=state.picked.size;
     // A named visitor's jar carries their name on a paper label (it moves with the jar); the line under it then shows
     // only the count. Guests keep "Your jar" under the jar. The button says both to screen readers.
-    const tag=stage.querySelector('.jar-tag');tag.textContent=state.name;tag.hidden=!state.name;
+    const tag=stage.querySelector('.jar-tag');tag.innerHTML=state.name?'<b>'+esc(named(U.jarTagName))+'</b><small>'+esc(U.jarTagWord)+'</small>':'';tag.hidden=!state.name;
+    // A long name shrinks to fit the label (down to 70%) before it is cut with "…".
+    const fit=tag.querySelector('b');if(fit){let k=1;tag.style.setProperty('--fit',1);while(fit.scrollWidth>fit.clientWidth+1&&k>.7){k-=.05;tag.style.setProperty('--fit',k.toFixed(2))}}
     stage.querySelector('.jar-name').textContent=jarTitle();stage.querySelector('.jar-name').hidden=!!state.name;
     stage.querySelector('.jar-count').textContent=count;
     stage.querySelector('.play-jar').setAttribute('aria-label',jarTitle()+', '+count);
@@ -469,13 +471,13 @@ const Play=(()=>{
     card.querySelector('button').onclick=()=>endFinale();
     if(reduced.matches)return;
     const soft='cubic-bezier(.2,.8,.2,1)';
-    // 1. cork in (the "sealed" style), 2. the jar dips as if picked up and leaves through the top, 3. the page clears,
+    // 1. cork in and the gift bow tied on (the "sealed" style), 2. the jar dips as if picked up and leaves through the top, 3. the page clears,
     // 4. Mareike is there, 5. the words.
-    leaving=jar.animate([{transform:'none'},{transform:'translateY(9px)',offset:.2,easing:'cubic-bezier(.55,0,.9,.45)'},{transform:'translateY(-125vh) rotate(7deg)'}],{duration:1300,delay:600,fill:'forwards'});
-    card.animate([{opacity:0},{opacity:1}],{duration:450,delay:1250,fill:'backwards'});
-    card.querySelector('.meet-host').animate([{opacity:0,transform:'scale(.82)'},{opacity:1,transform:'none'}],{duration:620,delay:1550,easing:soft,fill:'backwards'});
+    leaving=jar.animate([{transform:'none'},{transform:'translateY(9px)',offset:.2,easing:'cubic-bezier(.55,0,.9,.45)'},{transform:'translateY(-125vh) rotate(7deg)'}],{duration:1300,delay:1150,fill:'forwards'});
+    card.animate([{opacity:0},{opacity:1}],{duration:450,delay:1800,fill:'backwards'});
+    card.querySelector('.meet-host').animate([{opacity:0,transform:'scale(.82)'},{opacity:1,transform:'none'}],{duration:620,delay:2100,easing:soft,fill:'backwards'});
     for(const [n,el] of [...card.querySelectorAll('h2,p,.primary,.subtle')].entries())
-      el.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:480,delay:2050+n*110,easing:'ease-out',fill:'backwards'});
+      el.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:480,delay:2600+n*110,easing:'ease-out',fill:'backwards'});
   }
   function endFinale(quiet){
     leaving?.cancel();leaving=null;
@@ -517,12 +519,12 @@ const Play=(()=>{
       // One way to move between the five problems: they lie side by side. A marble of the next one looks in at each
       // edge (tap it, swipe, or ← →), and five dots in the problem colours under the shelves, with a faint ‹ › either
       // side, say where you are. No counter, no tab row, no written hint (see renderArea and the end of mount).
-      '<header class="play-head"><p class="area-ask">'+esc(U.areaAsk)+'</p><div class="area-title"><h1 tabindex="-1"></h1>'+
-      '<span class="area-steps"><button class="area-step" data-step="-1" aria-label="'+esc(U.areaPrev)+'">‹</button><button class="area-step" data-step="1" aria-label="'+esc(U.areaNext)+'">›</button></span></div></header>'+
+      '<header class="play-head"><p class="area-ask">'+esc(U.areaAsk)+'</p><div class="area-title"><button class="area-step" data-step="-1" aria-label="'+esc(U.areaPrev)+'">‹</button>'+
+      '<h1 tabindex="-1"></h1><button class="area-step" data-step="1" aria-label="'+esc(U.areaNext)+'">›</button></div></header>'+
       '<div class="play-shelves"></div>'+
       '<button class="area-peek" data-step="-1" aria-label="'+esc(U.areaPrev)+'"></button><button class="area-peek" data-step="1" aria-label="'+esc(U.areaNext)+'"></button>'+
       '<svg class="play-art" aria-hidden="true"></svg>'+
-      '<button class="play-jar"><span class="bottle" aria-hidden="true"><span class="bottle-inner"><span class="bottle-scale">'+bottleArt+'</span><span class="cork"></span><span class="jar-tag"></span></span></span>'+
+      '<button class="play-jar"><span class="bottle" aria-hidden="true"><span class="bottle-inner"><span class="bottle-scale">'+bottleArt+'</span><span class="cork"></span><span class="jar-tag"></span>'+'<span class="jar-bow"><svg viewBox="0 0 150 196"><defs><linearGradient id="ribbon" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#c8414c"/><stop offset="1" stop-color="#8f2430"/></linearGradient></defs><path d="M38 24.5 Q75 28 112 24.5 L112 30.5 Q75 34 38 30.5 Z" fill="url(#ribbon)"/><g transform="translate(104 27.5) rotate(22) scale(1.2) translate(-75 -28)"><path d="M73 30 L63 53 L67.5 50 L70 54.5 L76.5 31 Z M77 30 L87 52 L82.5 49.5 L80 54 L73.5 31 Z" fill="#9e2a35"/><path d="M75 28 C61 11 43 15 49 26 C53 33 66 31 75 28 Z M75 28 C89 11 107 15 101 26 C97 33 84 31 75 28 Z" fill="url(#ribbon)"/><path d="M74 27.5 C64 18 53 19 54 25 M76 27.5 C86 18 97 19 96 25" fill="none" stroke="#7c1c27" stroke-width="1.1" stroke-linecap="round" opacity=".55"/><path d="M58 19.5 C62 17.5 66 19 69 22 M92 19.5 C88 17.5 84 19 81 22" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".35"/><ellipse cx="75" cy="28.3" rx="5.2" ry="4.4" fill="#a92f3a"/><ellipse cx="74" cy="27" rx="2.2" ry="1.3" fill="#fff" opacity=".3"/></g></svg></span>'+'</span></span>'+
       '<span class="jar-label"><span class="jar-name"></span><span class="jar-count">0</span></span><span class="jar-open">'+esc(U.jarOpen)+'</span></button>'+
       '<button class="play-back subtle" data-action="restart">'+esc(U.back)+'</button>'+
       '<button class="send-jar primary" hidden></button>'+
