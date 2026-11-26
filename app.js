@@ -38,8 +38,10 @@ function save(){
   }))}catch{}
 }
 const esc=v=>String(v).replace(/[&<>"']/g,k=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[k]));
+// The glass belongs to the problem, not to its place in the list: the pictures are numbered (swirl-<n>-<shade>) by problem id.
+const glassOf={control:0,connection:1,thinking:2,work:3,equity:4,misuse:5},glass=g=>glassOf[groups[g]?.id]??g;
 // The purple problem (0) has its own, more varied shades for marbles 1–5: periwinkle, orchid, deep indigo, lilac and wine (swirl-0-v1…v5).
-function marbleImage(g,shade){return g===0&&shade>0?'assets/swirl-0-v'+shade+'.webp':'assets/swirl-'+g+'-'+shade+'.webp'}
+function marbleImage(g,shade){const n=glass(g);return n===0&&shade>0?'assets/swirl-0-v'+shade+'.webp':'assets/swirl-'+n+'-'+shade+'.webp'}
 function ball(idea){return idea.own?'<span aria-hidden="true" class="ball own"></span>':'<span aria-hidden="true" class="ball" style="--glass:url('+marbleImage(idea.g,idea.shade)+')"></span>'}
 function btn(key,label,cls='action'){return '<button class="'+cls+'" data-action="'+key+'">'+esc(label)+'</button>'}
 function named(v){return v.replace('{name}',()=>state.name)}
@@ -47,7 +49,7 @@ const jarTitle=()=>state.name?named(U.personalJar):U.jar;
 // Story controls. "Skip to the ideas" is there for visitors in a hurry: bottom right, where the eye looks for "next".
 // (There is no Pause any more: the scenes are short and wait for a tap at the end anyway.)
 function controls(label=U.next){
-  const early=state.step>=1&&state.step<10;
+  const early=state.step>=1&&state.step<11;
   return '<nav class="controls">'+btn('back',U.back,'subtle')+(early?btn('skip',U.skip,'subtle skip'):'')+btn('next',label,'keyboard-next')+'</nav>';
 }
 let raf=0;
@@ -109,7 +111,7 @@ function machine(stage,step){
   const entryPose=carried&&from>0?lastPose:null;
   // Breaking and mending are one clock run in two directions: pick it up wherever the other scene left it.
   const f0=!entryPose?0:step===4&&from===3?1-entryPose.breakage:step===3&&from===4?MarbleRun.fall.start+(1-MarbleRun.fall.start)*MarbleRun.clamp((entryPose.breakage-MarbleRun.fall.from)/(1-MarbleRun.fall.from)):0;
-  const duration=Math.max(700,[0,3800,3400,2800,2400,2700,4000,4000,3700,4400][step]*(1-f0));
+  const duration=Math.max(700,[0,3800,3400,2800,2400,2700,3600,4000,4000,3700,4400][step]*(1-f0));
   // A scene left early hands its marble over: for half a second the pose glides from where it was to where it belongs.
   const joinSpan=f0?0:MarbleRun.clamp(520/duration);
   // "I am." and the marble goes: only a breath at the brink while the words change, then it races down the drop.
@@ -177,7 +179,7 @@ function machine(stage,step){
     const rect=stage.getBoundingClientRect(),mobile=rect.width<700;
     if(!rect.width)return;   // not laid out (hidden tab): there is no camera to aim yet
     // In the collapse scene the camera stays close for the first moment of the plunge, then pulls back as the marble gathers speed.
-    const blend=MarbleRun.ease(MarbleRun.clamp(step===3?(u-.1)*2.4:u*(step===6?6:2.7)));
+    const blend=MarbleRun.ease(MarbleRun.clamp(step===3?(u-.1)*2.4:u*(step===7?6:2.7)));
     let cx,cy,width;
     if(closeUp){
       width=mobile?340:780;
@@ -304,6 +306,7 @@ function lateWords(text){
   if(!mark)return esc(text);
   return esc(text.slice(0,mark.index))+'<span class="late">'+esc(mark[1])+'</span>'+esc(text.slice(mark.index+mark[0].length));
 }
+// Steps: 0 cover, 1 to 10 the run (3 is the first problem, 6 to 10 the other five in the order of content.js, each at its own station), 11 the marble page, 12 the game.
 function story(){
   const s=state.step,group=s===3?groups[0]:s>=6?groups[s-5]:null;
   // "What about you?" stands alone first; the next click asks the question itself (see go()).
@@ -455,7 +458,7 @@ function flood(origin){
     ],{duration:700,easing:'cubic-bezier(.22,.68,.2,1)'});
   }
 }
-window.addEventListener('resize',()=>{if(state.step===10)fillMarbleField()});
+window.addEventListener('resize',()=>{if(state.step===11)fillMarbleField()});
 // Marble field → game. The field is lifted off the page onto a layer above it and the game is built underneath. Then the marbles of the
 // problem the game opens on fly to their places on its shelves, every other marble parts outward and fades, and the game fades in.
 let veil=null,veilTimer=0;
@@ -499,12 +502,11 @@ function handover(swap){
 let booted=false;
 function go(n,after){
   const from=state.step;
-  const source=from===9&&n===10?app.querySelector('#mate2 image'):null;
+  const source=from===10&&n===11?app.querySelector('#mate2 image'):null;
   const handoff=source?source.getBoundingClientRect():null;
-  if(n===11)n=from===12?10:12;                 // step 11 (the plain list) is retired: the flood leads straight into the game
   n=Math.max(0,Math.min(12,n));
   // Marble page: the first tap parts the marbles and brings the sentence, the second brings the question, the third moves on.
-  const asking=from===10&&n>10&&app.querySelector('.flood:not(.asked)');
+  const asking=from===11&&n>11&&app.querySelector('.flood:not(.asked)');
   if(asking){
     cancelAnimationFrame(raf);
     if(!asking.classList.contains('settled'))asking.classList.add('settled');
@@ -528,15 +530,15 @@ function go(n,after){
     window.scrollTo(0,0);
     if(!n)lastCamera=null;
     document.body.classList.toggle('cover',!n);   // the header only exists once the run has started
-    if(!n)welcome();else if(n<=9)story();else if(n===10)flood(handoff);else Play.mount();
+    if(!n)welcome();else if(n<=10)story();else if(n===11)flood(handoff);else Play.mount();
     app.querySelector('h1[tabindex]')?.focus({preventScroll:true});
     if(after)after();
   };
   // Scenes of the run share one stage and animate themselves. Every other change of screen is a
   // different page, so the browser cross-fades a snapshot of the old one into the new one.
-  const sameStage=from>=1&&from<=9&&n>=1&&n<=9&&app.querySelector('.stage.machine');
+  const sameStage=from>=1&&from<=10&&n>=1&&n<=10&&app.querySelector('.stage.machine');
   endHandover();
-  if(from===10&&n===12&&booted&&!reduced.matches&&app.querySelector('.specimen'))handover(swap);
+  if(from===11&&n===12&&booted&&!reduced.matches&&app.querySelector('.specimen'))handover(swap);
   // Cover → story: no cross-fade of the whole page. The portrait flies up on its own (dockPortrait), and a cross-fade
   // would also keep a second copy of it fading out in place. Only the new screen fades in.
   else if(from===0&&n===1&&booted&&!reduced.matches){swap();app.animate([{opacity:0},{opacity:1}],{duration:450,easing:'ease'})}
@@ -571,7 +573,7 @@ app.onclick=e=>{
       // Straight to the marble page (all the marbles, full screen). "Are you worried?" holds back its question and
       // waits for the marble: mark the question shown and pass, so the jump is not caught there.
       app.querySelector('.held')?.classList.add('shown');goPass=true;
-      go(10);break;
+      go(11);break;
   }
 };
 document.querySelector('.mast').onclick=e=>{if(!e.target.closest('button,a')&&state.step>=1&&state.step<=11&&!sheet.open)go(state.step+1)};
@@ -584,4 +586,4 @@ document.addEventListener('keydown',e=>{
 // ?skip jumps straight to the game, for reviewing it without replaying the story.
 // A visitor who already reached the ideas in this tab lands there again after a reload, instead of at the welcome screen.
 let reached=false;try{reached=sessionStorage.getItem('idea-map-reached')==='yes'&&!!state.fullName}catch{}
-go(new URLSearchParams(location.search).has('skip')||reached?12:new URLSearchParams(location.search).has('flood')?10:0);
+go(new URLSearchParams(location.search).has('skip')||reached?12:new URLSearchParams(location.search).has('flood')?11:0);

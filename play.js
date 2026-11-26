@@ -533,7 +533,7 @@ const Play=(()=>{
     if(!asked)return ask();
     app.innerHTML='<section class="world play"><div class="play-stage">'+
       // One way to move between the five problems: they lie side by side. A marble of the next one looks in at each
-      // edge (tap it, swipe, or ← →), and five dots in the problem colours under the shelves, with a faint ‹ › either
+      // edge (tap it, swipe, or ← →), and a dot per problem in the problem colours under the shelves, with a faint ‹ › either
       // side, say where you are. No counter, no tab row, no written hint (see renderArea and the end of mount).
       '<header class="play-head"><p class="area-ask">'+esc(U.areaAsk)+'</p><div class="area-title"><button class="area-step" data-step="-1" aria-label="'+esc(U.areaPrev)+'">‹</button>'+
       '<h1 tabindex="-1"></h1><button class="area-step" data-step="1" aria-label="'+esc(U.areaNext)+'">›</button></div></header>'+

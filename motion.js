@@ -5,7 +5,7 @@ const MarbleRun = (() => {
   const ease = t => t*t*(3-2*t);
   const rad = Math.PI/180;
   const radius = 19;
-  const ends = [-115,150,550,710,1010,1330,1630,1810];
+  const ends = [-115,150,550,710,1430,1750,2050,2230];
   // The opening never climbs. The marble starts high on a calm slope and creeps to the brink while the worry
   // builds. The acceleration belongs to the collapse scene: there it tips over the brink, plunges ever faster,
   // and the run gives way as it arrives.
@@ -14,30 +14,42 @@ const MarbleRun = (() => {
   // Scene 3 spends its first quarter on the plunge (about 0.7s); the break clock then starts just before the run lets go.
   const fall={start:.26,from:.22};
   const plunge = x => {const u=clamp((x-plungeFrom)/(plungeTo-plungeFrom));return u*u*(3-2*u)};
-  const ground = x => 148+.055*x
+  const base = x => 148+.055*x
     - plungeHeight*(1-plunge(x))
     + (x>=1480?58:0)
     - .055*Math.max(0,x-1630);
+  // The misuse station is part of the track, between the break and the bridge: the rail dives down a steep ramp almost
+  // to the floor and ends in an upturned lip (a quarter pipe), which throws the marble over a gap onto the next rail.
+  // Everything after it (bridge, gate, gap, seesaw) stands `rampSpan` further right than the plain line would put it.
+  const kickTop=712,kickLow=902,kickEnd=959,kickDrop=131,lipRadius=62,rampSpan=420,landFrom=1040;
+  const kicker = x => {
+    const u=clamp((x-kickTop)/(kickLow-kickTop)),low=base(kickTop)+kickDrop;
+    if(x<kickLow)return low-kickDrop*(1-u*u*(3-2*u));
+    const lip=y=>low-lipRadius+Math.sqrt(lipRadius**2-(y-kickLow)**2);
+    // Past its end the lip is carried on straight, so the slope at the very end can still be measured.
+    return x<=kickEnd?lip(x):lip(kickEnd)+(x-kickEnd)*(lip(kickEnd)-lip(kickEnd-1));
+  };
+  const ground = x => x<=kickTop?base(x):x<kickEnd+3?kicker(x):base(Math.max(kickTop,x-rampSpan));
   const camera = {1:[45,143,680],2:[348,155,720],3:[730,248,1120],4:[730,248,1120],
-    5:[650,222,740],6:[860,215,492],7:[1162,250,680],8:[1480,267,535],9:[1763,305,680]};
-  const times = {1:2500,2:2200,3:1450,4:1500,5:1500,6:4400,7:2800,8:2200,9:3800};
-  function railPath(a,b){
+    5:[650,222,740],6:[950,228,700],7:[1280,215,492],8:[1582,250,680],9:[1900,267,535],10:[2183,305,680]};
+  const times = {1:2500,2:2200,3:1450,4:1500,5:1500,6:3600,7:4400,8:2800,9:2200,10:3800};
+  function railPath(a,b,ground){
     const points=[];
     for(let x=a;x<b;x+=4)points.push([x,ground(x)]);
     points.push([b,ground(b)]);
     return points.map(([x,y],i)=>(i?'L':'M')+x+' '+y.toFixed(2)).join(' ');
   }
-  function rail(a,b){
-    const d=railPath(a,b);
+  function rail(a,b,line=ground){
+    const d=railPath(a,b,line);
     // The same concave ceramic profile is used on every section and moving leaf.
     const layers=[[9,15,'#d4c3ae'],[6,19,'#e3d5c2'],[2,20,'#fcf7ef'],[-2,14,'#e0d3c3'],[-4,9,'#ede3d5'],[-5,3,'#fffaf3'],[5,3,'#fffdf7']];
     return '<g fill="none" stroke-linecap="round" stroke-linejoin="round">'+layers.map(([dy,w,c])=>'<path d="'+d+'" transform="translate(0 '+dy+')" stroke="'+c+'" stroke-width="'+w+'"/>').join('')+'</g>';
 
   }
-  const foot=(x)=>'<ellipse cx="'+(x+3)+'" cy="342" rx="29" ry="4" fill="url(#shadow)"/><rect x="'+(x-5)+'" y="'+ground(x)+'" width="10" height="'+(341-ground(x))+'" rx="4" fill="url(#ash)"/>';
-  const balanceX=1810,gateX=1169,gateY=ground(gateX)-81;
+  const foot=(x,line=ground)=>'<ellipse cx="'+(x+3)+'" cy="342" rx="29" ry="4" fill="url(#shadow)"/><rect x="'+(x-5)+'" y="'+line(x)+'" width="10" height="'+(341-line(x))+'" rx="4" fill="url(#ash)"/>';
+  const balanceX=2230,gateX=1589,gateY=ground(gateX)-81;
   const balanceY=ground(balanceX);
-  const westBank=765,eastBank=955,bridgeCentre=(westBank+eastBank)/2;
+  const westBank=1185,eastBank=1375,bridgeCentre=(westBank+eastBank)/2;
   function leaf(id,bank,tip){
     const y=ground(bank),end=ground(tip);
     const brace='<path d="M'+bank+' '+(y+25)+' L'+tip+' '+(end+6)+' L'+bank+' '+(y+5)+'Z" fill="#d4b895"/>';
@@ -65,10 +77,11 @@ const MarbleRun = (() => {
   const sections=[
     foot(-490)+foot(-190)+foot(12)+foot(344)+rail(-1100,548)+cracks(-1100,548),
     foot(609)+rail(551,708)+cracks(551,708),
-    foot(westBank)+foot(eastBank)+rail(712,westBank)+rail(eastBank,1007)+leaf('bridgeLeft',westBank,bridgeCentre-1)+leaf('bridgeRight',eastBank,bridgeCentre+1),
-    foot(1070)+foot(1280)+rail(1012,1328)+'<path d="M'+(gateX-7)+' '+(ground(gateX)+1)+' V'+gateY+'" stroke="#e1d1bc" stroke-width="8" stroke-linecap="round"/><g id="gate"><rect x="'+(gateX-4)+'" y="'+gateY+'" width="8" height="69" rx="4" fill="url(#ash)"/></g><circle cx="'+gateX+'" cy="'+gateY+'" r="5" fill="#c6a786"/>',
-    foot(1363)+foot(1424)+rail(1332,1441)+foot(1496)+foot(1583)+rail(1480,1628),
-    '<ellipse cx="1810" cy="341" rx="46" ry="5" fill="url(#shadow)"/><path d="M1781 340 L1805 '+(balanceY+12)+' Q1810 '+(balanceY+2)+' 1815 '+(balanceY+12)+' L1839 340Z" fill="url(#ash)"/><g id="balance">'+rail(1632,1988)+'<rect x="1985" y="'+(ground(1988)-34)+'" width="8" height="40" rx="4" fill="url(#ash)"/><circle cx="1810" cy="'+(balanceY+6)+'" r="4" fill="#ae967a"/></g>'
+    foot(730)+foot(kickLow)+foot(948)+rail(kickTop,kickEnd),
+    foot(1062)+foot(westBank)+foot(eastBank)+rail(landFrom,westBank)+rail(eastBank,1427)+leaf('bridgeLeft',westBank,bridgeCentre-1)+leaf('bridgeRight',eastBank,bridgeCentre+1),
+    foot(1490)+foot(1700)+rail(1432,1748)+'<path d="M'+(gateX-7)+' '+(ground(gateX)+1)+' V'+gateY+'" stroke="#e1d1bc" stroke-width="8" stroke-linecap="round"/><g id="gate"><rect x="'+(gateX-4)+'" y="'+gateY+'" width="8" height="69" rx="4" fill="url(#ash)"/></g><circle cx="'+gateX+'" cy="'+gateY+'" r="5" fill="#c6a786"/>',
+    foot(1783)+foot(1844)+rail(1752,1861)+foot(1916)+foot(2003)+rail(1900,2048),
+    '<ellipse cx="2230" cy="341" rx="46" ry="5" fill="url(#shadow)"/><path d="M2201 340 L2225 '+(balanceY+12)+' Q2230 '+(balanceY+2)+' 2235 '+(balanceY+12)+' L2259 340Z" fill="url(#ash)"/><g id="balance">'+rail(2052,2408)+'<rect x="2405" y="'+(ground(2408)-34)+'" width="8" height="40" rx="4" fill="url(#ash)"/><circle cx="2230" cy="'+(balanceY+6)+'" r="4" fill="#ae967a"/></g>'
 
   ];
   // There is one blue marble in the story and only ever one in the picture. It cannot cross the open bridge, so at each
@@ -98,11 +111,11 @@ const MarbleRun = (() => {
     };
   }
   // On a steep rail the marble sits along the rail's normal, not straight above it.
-  function ride(x){
-    const slope=(ground(x+1)-ground(x-1))/2,n=Math.hypot(1,slope);
-    return {x:x+(radius+6)*slope/n,y:ground(x)-(radius+6)/n};
+  function ride(x,line=ground){
+    const slope=(line(x+1)-line(x-1))/2,n=Math.hypot(1,slope);
+    return {x:x+(radius+6)*slope/n,y:line(x)-(radius+6)/n};
   }
-  const approach=668,waitingX=westBank-radius-5,gateStop=gateX-radius-4,lipStop=1985-radius;
+  const approach=668,waitingX=westBank-radius-5,gateStop=gateX-radius-4,lipStop=2405-radius;
   // A marble fed in from above: how far over its resting place it still is. It falls, lands, and hops once.
   function dropIn(t,from,to){
     const u=clamp((t-from)/(to-from));
@@ -110,11 +123,11 @@ const MarbleRun = (() => {
     const v=(u-.7)/.3;return 44*v*(1-v);
   }
   // Equity, where the marble is on the seesaw over the scene: lands right of the middle, slows to a stop just past it
-  // on the left (1772, the middle is 1810), turns back, gathers speed down to the right end and knocks against the lip.
-  const equityTurn=1772,equityLanded=.42,equityDown=.74;
+  // on the left (2192, the middle is 2230), turns back, gathers speed down to the right end and knocks against the lip.
+  const equityTurn=2192,equityLanded=.42,equityDown=.74;
   function equityX(t){
-    if(t<.2)return 1850;
-    if(t<equityLanded)return mix(1850,equityTurn,1-(1-(t-.2)/(equityLanded-.2))**2);
+    if(t<.2)return 2270;
+    if(t<equityLanded)return mix(2270,equityTurn,1-(1-(t-.2)/(equityLanded-.2))**2);
     if(t<equityDown)return mix(equityTurn,lipStop,clamp((t-equityLanded-.04)/(equityDown-equityLanded-.04))**1.8);
     if(t<equityDown+.1)return mix(lipStop,lipStop-13,1-(1-(t-equityDown)/.1)**2);
     return mix(lipStop-13,lipStop,clamp((t-equityDown-.1)/.12)**2);
@@ -127,9 +140,9 @@ const MarbleRun = (() => {
     {
       // Thinking: appears on the far side of the bridge, rolls into the gate, is thrown back, tries once more and stays there.
       let x=gateStop,up=0,show=0;
-      if(step===7){
+      if(step===8){
         show=clamp(t/.05);up=dropIn(t,0,.2);
-        if(t<.5)x=mix(1040,gateStop,clamp((t-.2)/.3)**1.6);
+        if(t<.5)x=mix(1460,gateStop,clamp((t-.2)/.3)**1.6);
         else if(t<.66)x=mix(gateStop,gateStop-26,1-(1-(t-.5)/.16)**2);
         else x=mix(gateStop-26,gateStop,clamp((t-.66)/.2)**2);
       }
@@ -137,11 +150,11 @@ const MarbleRun = (() => {
     }
     {
       // Work: rolls off the end of its rail, misses the next one and ends up on the floor, out of the run.
-      const edge=1444,land=1470,end=1487,lying=341-radius*1.12;
+      const edge=1864,land=1890,end=1907,lying=341-radius*1.12;
       let x=end,y=lying,scale=1.12,air=false,show=0;
-      if(step===8){
+      if(step===9){
         show=clamp(t/.05);
-        if(t<.52){x=mix(1352,edge,clamp((t-.2)/.32)**1.6);const up=dropIn(t,0,.2);y=rest(x)-up;scale=1;air=up>3}
+        if(t<.52){x=mix(1772,edge,clamp((t-.2)/.32)**1.6);const up=dropIn(t,0,.2);y=rest(x)-up;scale=1;air=up>3}
         else if(t<.72){const v=(t-.52)/.2;x=mix(edge,land,v);y=mix(rest(edge),lying,v*v);scale=mix(1,1.12,v);air=true}
         else{const v=(t-.72)/.28,hop=Math.min(1,v/.35);x=mix(land,end,1-(1-v)**2);y=lying-40*hop*(1-hop)}
       }
@@ -151,7 +164,7 @@ const MarbleRun = (() => {
       // Equity: lands on the seesaw, rolls left a little past the middle so it nearly balances, then turns back,
       // rolls down to the right end and stays there. The seesaw follows it (see equityX and balance in pose).
       let x=lipStop,up=0,show=0;
-      if(step===9){show=clamp(t/.05);up=dropIn(t,0,.18);x=equityX(t)}
+      if(step===10){show=clamp(t/.05);up=dropIn(t,0,.18);x=equityX(t)}
       put({y:balanceY+(x-balanceX)*Math.tan(balance*rad)-(radius+6)/Math.cos(balance*rad)-up,show,air:up>3},x);
     }
     return list;
@@ -172,7 +185,21 @@ const MarbleRun = (() => {
     const b=Math.min(brake,t-cruiseEnd);
     return kicked+top*(cruiseEnd-fastAt-kick)+top*b-top*b*b/(2*brake);
   };
-  let plungeRun=null;
+  let plungeRun=null,rampRun=null;
+  // Misuse, the marble over the scene: it rolls off the mended rail onto the ramp, races down it ever faster, is thrown
+  // up by the lip (launchAt), flies over the gap in one arc, comes down hard on the next rail (landAt), hops and rolls out.
+  const launchAt=.48,landAt=.72,landX=1104,landRest=1128;
+  function rampRide(t){
+    const lip=ride(kickEnd),rest=x=>ground(x)-radius-6;
+    if(t<launchAt){rampRun=rampRun||timedRail(approach,kickEnd,90);return {...ride(rampRun(t/launchAt)),airborne:false}}
+    if(t<landAt){
+      // One thrown arc from the lip to the rail: it leaves a little steeper than the lip's own slope and peaks well above the track.
+      const v=(t-launchAt)/(landAt-launchAt),far=landX-lip.x,rise=lip.y-rest(landX),k=1.2*(ground(kickEnd-1)-ground(kickEnd+1))/2;
+      return {x:lip.x+far*v,y:lip.y-(k*far*v-(k*far-rise)*v*v),airborne:true};
+    }
+    const w=clamp((t-landAt)/.2),hop=clamp((t-landAt)/.11),x=mix(landX,landRest,1-(1-w)**2);
+    return {x,y:rest(x)-26*4*hop*(1-hop),airborne:hop<1};
+  }
   function pose(step,f){
     const t=clamp(f);
     const explosion=typeof RunExplosion==='undefined'?require('./explosion.js'):RunExplosion;
@@ -184,36 +211,38 @@ const MarbleRun = (() => {
     else if(step===2)x=mix(150,brink,t);
     // After the break is mended the marble rolls on towards the bridge. The bridge is as far as it gets.
     else if(step===5)x=mix(550,approach,t);
-    else if(step===6)x=mix(approach,waitingX,1-(1-clamp(t/.19))**2);
-    else if(step>6)x=waitingX;
+    else if(step===7)x=mix(landRest,waitingX,1-(1-clamp(t/.19))**2);
+    else if(step>7)x=waitingX;
     // The two banks reach for each other, strain, and fall back open.
     let bridge=0;
-    if(step===6){
+    if(step===7){
       const rise=ease(clamp((t-.28)/.24)),give=ease(clamp((t-.64)/.12));
       bridge=.62*rise*(1-give)+.014*Math.sin(t*250)*clamp((t-.42)/.1)*(1-give)-.06*Math.sin(Math.PI*clamp((t-.76)/.16));
     }
     // The gate only shudders when the marble runs into it, twice, a little less the second time.
-    const gate=step===7?-7*Math.sin(Math.PI*clamp((t-.5)/.12))-2.5*Math.sin(Math.PI*clamp((t-.86)/.08)):0;
+    const gate=step===8?-7*Math.sin(Math.PI*clamp((t-.5)/.12))-2.5*Math.sin(Math.PI*clamp((t-.86)/.08)):0;
     // The seesaw follows the one marble: level until it lands, dips a little to the left while the marble is past the
     // middle, then tips right as it rolls down and stays down (10°), with a small thud when its end meets the floor.
     let balance=0;
-    if(step===9){
+    if(step===10){
       const off=equityX(t)-balanceX,landed=ease(clamp((t-.16)/.1));
-      balance=landed*(off<0?1.8*off/(balanceX-1632)*10:Math.min(10,10*off/(lipStop-balanceX)))-.9*Math.sin(Math.PI*clamp((t-equityDown)/.1));
+      balance=landed*(off<0?1.8*off/(balanceX-2052)*10:Math.min(10,10*off/(lipStop-balanceX)))-.9*Math.sin(Math.PI*clamp((t-equityDown)/.1));
     }
     let y=ground(x)-radius-6;
     if(step===2)({x,y}=ride(x));
+    let airborne=false;
+    if(step===6)({x,y,airborne}=rampRide(t));
     if(plunging){
       // Gravity sets the pace: slow over the brink, fastest at the bottom, straight into the break.
       plungeRun=plungeRun||timedRail(brink,550+13*fall.from/explosion.onset,45);
       ({x,y}=ride(plungeRun(t/fall.start)));
     }else if(breaking)({x,y}=explosion.ball(breakage,y));
-    const stressReached=(step===3&&breakage>=explosion.impact)||(step===6&&t>=.66)||
-      (step===7&&t>=.5)||(step===8&&t>=.52)||(step===9&&t>=equityDown);
+    const stressReached=(step===3&&breakage>=explosion.impact)||(step===6&&t>=launchAt)||(step===7&&t>=.66)||
+      (step===8&&t>=.5)||(step===9&&t>=.52)||(step===10&&t>=equityDown);
     // tremor: how hard the run shakes (0 to 1). front: cracks left of this x have appeared.
     const tremor=step===2?ease(clamp((t-.2)/.5)):step===3?1-clamp(t/(fall.start*.5)):0;
     const front=step===2?mix(150,brink,t)+130:step===3?brink+130+2500*t:step===4?mix(660,250,t):-1e4;
-    return {tremor,front,stressReached,x,y,spin:(x-ends[0])/radius/rad,breakage,bridge,gate,balance,airborne:false,left:step>6,mates:mates(step,t,balance)};
+    return {tremor,front,stressReached,x,y,spin:(x-ends[0])/radius/rad,breakage,bridge,gate,balance,airborne,left:step>7,mates:mates(step,t,balance)};
   }
   function transforms(p){
     const explosion=typeof RunExplosion==='undefined'?require('./explosion.js'):RunExplosion;

@@ -23,10 +23,11 @@ const RunExplosion = (() => {
   const rails = [
     {pin:344, start:0, tilt:8, slide:-17},
     {pin:609, start:.02, tilt:58, slide:53},
-    {pin:955, start:.11, tilt:-24, slide:-21},
-    {pin:1070, start:.21, tilt:32, slide:44},
-    {pin:1583, start:.32, tilt:-19, slide:-23},
-    {pin:1810, start:.43, tilt:21, slide:28}
+    {pin:902, start:.07, tilt:30, slide:70},
+    {pin:1375, start:.11, tilt:-24, slide:-21},
+    {pin:1490, start:.21, tilt:32, slide:44},
+    {pin:2003, start:.32, tilt:-19, slide:-23},
+    {pin:2230, start:.43, tilt:21, slide:28}
   ];
   // How far the sprite's box reaches below its centre once turned by `angle`. Upright (0°) that is half its height.
   const reach = (i,angle) => Math.abs(sprites[i][0]/2*Math.sin(angle*rad))+Math.abs(sprites[i][1]/2*Math.cos(angle*rad));
