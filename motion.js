@@ -109,6 +109,16 @@ const MarbleRun = (() => {
     if(u<.7)return 340*(1-(u/.7)**2);
     const v=(u-.7)/.3;return 44*v*(1-v);
   }
+  // Equity, where the marble is on the seesaw over the scene: lands right of the middle, slows to a stop just past it
+  // on the left (1772, the middle is 1810), turns back, gathers speed down to the right end and knocks against the lip.
+  const equityTurn=1772,equityLanded=.42,equityDown=.74;
+  function equityX(t){
+    if(t<.2)return 1850;
+    if(t<equityLanded)return mix(1850,equityTurn,1-(1-(t-.2)/(equityLanded-.2))**2);
+    if(t<equityDown)return mix(equityTurn,lipStop,clamp((t-equityLanded-.04)/(equityDown-equityLanded-.04))**1.8);
+    if(t<equityDown+.1)return mix(lipStop,lipStop-13,1-(1-(t-equityDown)/.1)**2);
+    return mix(lipStop-13,lipStop,clamp((t-equityDown-.1)/.12)**2);
+  }
   // Where the stand-ins of stations 3 to 5 are. Outside its own scene a stand-in is not shown (app.js fades it), so the
   // marble is always in exactly one place.
   function mates(step,t,balance){
@@ -138,22 +148,30 @@ const MarbleRun = (() => {
       put({y,show,air,scale},x);
     }
     {
-      // Equity: lands on one side of the seesaw and rolls to the low end. All the weight is on one side.
+      // Equity: lands on the seesaw, rolls left a little past the middle so it nearly balances, then turns back,
+      // rolls down to the right end and stays there. The seesaw follows it (see equityX and balance in pose).
       let x=lipStop,up=0,show=0;
-      if(step===9){
-        show=clamp(t/.05);up=dropIn(t,0,.18);
-        if(t<.6)x=mix(1850,lipStop,clamp((t-.2)/.4)**1.7);
-        else if(t<.72)x=mix(lipStop,lipStop-13,1-(1-(t-.6)/.12)**2);
-        else x=mix(lipStop-13,lipStop,clamp((t-.72)/.12)**2);
-      }
+      if(step===9){show=clamp(t/.05);up=dropIn(t,0,.18);x=equityX(t)}
       put({y:balanceY+(x-balanceX)*Math.tan(balance*rad)-(radius+6)/Math.cos(balance*rad)-up,show,air:up>3},x);
     }
     return list;
   }
   // Scene 1: the marble ambles for the first part, then the word "Fast." lands and it takes off.
   // `fastAt` is the place in the scene where that happens (app.js shows the word at the same moment).
-  const fastAt=.4;
-  const surge=t=>t<fastAt?.16*t/fastAt:.16+.84*(1-(1-(t-fastAt)/(1-fastAt))**2.2);
+  // The pace, as speed over time: a steady amble (it was already rolling on the cover), then at fastAt a short, visible
+  // push up to top speed (kick), a fast run, and a brief brake at the very end. app.js runs this scene on plain time
+  // (no settle), so the push lands on the same frame as the word.
+  const fastAt=.4,amble=.1,kick=.08,brake=.14;
+  const slow=amble/fastAt,top=(1-amble-kick*slow/2)/(kick/2+(1-fastAt-kick-brake)+brake/2);
+  const surge=t=>{
+    if(t<=fastAt)return slow*t;
+    const k=t-fastAt;
+    if(k<=kick)return amble+slow*k+(top-slow)*k*k/(2*kick);
+    const kicked=amble+(slow+top)*kick/2,cruiseEnd=1-brake;
+    if(t<=cruiseEnd)return kicked+top*(t-fastAt-kick);
+    const b=Math.min(brake,t-cruiseEnd);
+    return kicked+top*(cruiseEnd-fastAt-kick)+top*b-top*b*b/(2*brake);
+  };
   let plungeRun=null;
   function pose(step,f){
     const t=clamp(f);
@@ -176,8 +194,13 @@ const MarbleRun = (() => {
     }
     // The gate only shudders when the marble runs into it, twice, a little less the second time.
     const gate=step===7?-7*Math.sin(Math.PI*clamp((t-.5)/.12))-2.5*Math.sin(Math.PI*clamp((t-.86)/.08)):0;
-    // The seesaw tips under the one marble and stays down, with a small thud when its end meets the floor.
-    const balance=step===9?10*ease(clamp((t-.13)/.42))-.9*Math.sin(Math.PI*clamp((t-.55)/.1)):0;
+    // The seesaw follows the one marble: level until it lands, dips a little to the left while the marble is past the
+    // middle, then tips right as it rolls down and stays down (10°), with a small thud when its end meets the floor.
+    let balance=0;
+    if(step===9){
+      const off=equityX(t)-balanceX,landed=ease(clamp((t-.16)/.1));
+      balance=landed*(off<0?1.8*off/(balanceX-1632)*10:Math.min(10,10*off/(lipStop-balanceX)))-.9*Math.sin(Math.PI*clamp((t-equityDown)/.1));
+    }
     let y=ground(x)-radius-6;
     if(step===2)({x,y}=ride(x));
     if(plunging){
@@ -186,7 +209,7 @@ const MarbleRun = (() => {
       ({x,y}=ride(plungeRun(t/fall.start)));
     }else if(breaking)({x,y}=explosion.ball(breakage,y));
     const stressReached=(step===3&&breakage>=explosion.impact)||(step===6&&t>=.66)||
-      (step===7&&t>=.5)||(step===8&&t>=.52)||(step===9&&t>=.6);
+      (step===7&&t>=.5)||(step===8&&t>=.52)||(step===9&&t>=equityDown);
     // tremor: how hard the run shakes (0 to 1). front: cracks left of this x have appeared.
     const tremor=step===2?ease(clamp((t-.2)/.5)):step===3?1-clamp(t/(fall.start*.5)):0;
     const front=step===2?mix(150,brink,t)+130:step===3?brink+130+2500*t:step===4?mix(660,250,t):-1e4;
