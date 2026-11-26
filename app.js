@@ -47,7 +47,7 @@ const jarTitle=()=>state.name?named(U.personalJar):U.jar;
 // Story controls. "Skip to the ideas" is there for visitors in a hurry.
 function controls(label=U.next,withPause=false){
   const early=state.step>=1&&state.step<10;
-  return '<nav class="controls">'+btn('back',U.back,'subtle')+(early?btn('skip',U.skip,'subtle skip'):'')+(withPause?btn('pause',U.pause,'pause'):'')+'<span class="cue" aria-hidden="true">'+esc(matchMedia('(hover:hover)').matches?U.cueClick:U.cueTap)+'</span>'+btn('next',label,'keyboard-next')+'</nav>';
+  return '<nav class="controls">'+btn('back',U.back,'subtle')+(early?btn('skip',U.skip,'subtle skip'):'')+(withPause?btn('pause',U.pause,'pause'):'')+btn('next',label,'keyboard-next')+'</nav>';
 }
 let raf=0;
 function animate(duration,paint,done){
@@ -66,7 +66,7 @@ let lastCamera=null,lastPose=null,lastScene=0,coverX=-300,openerStart=-115,rig=n
 // "Are you worried?" is answered with the marble itself. While the question stands, the visitor can drag the marble along the
 // rail: back up the calm slope, or towards the edge. Let go and gravity takes it: it always ends up at the brink, later or sooner.
 // worry = {x: place on the rail, v: speed, dragging, anchor: where the camera stays, level: 0 calm … 1 at the edge}.
-let worry=null,rolledIn=false,dragged=false;
+let worry=null,rolledIn=false,dragged=false,askedAt=0;   // askedAt: when the question appeared (0 = not yet)
 const worryBack=150;   // how far back from the brink the marble can be pulled, in drawing units
 const worryLevel=x=>MarbleRun.clamp((x-(MarbleRun.brink-worryBack))/worryBack);
 function worryStep(now){
@@ -103,18 +103,18 @@ function machine(stage,step){
   const entryPose=carried&&from>0?lastPose:null;
   // Breaking and mending are one clock run in two directions: pick it up wherever the other scene left it.
   const f0=!entryPose?0:step===4&&from===3?1-entryPose.breakage:step===3&&from===4?MarbleRun.fall.start+(1-MarbleRun.fall.start)*MarbleRun.clamp((entryPose.breakage-MarbleRun.fall.from)/(1-MarbleRun.fall.from)):0;
-  const duration=Math.max(700,[0,4900,3900,2800,2600,3500,5200,4300,4000,4700][step]*(1-f0));
+  const duration=Math.max(700,[0,3800,3400,2800,2400,2700,4800,4000,3700,4400][step]*(1-f0));
   // A scene left early hands its marble over: for half a second the pose glides from where it was to where it belongs.
   const joinSpan=f0?0:MarbleRun.clamp(520/duration);
   // "I am." and the marble goes: only a breath at the brink while the words change, then it races down the drop.
   const hold=step===3&&!f0&&!rolledIn?700:0;
-  rolledIn=false;worry=null;
+  rolledIn=false;worry=null;askedAt=0;
   lastScene=step;
   // f is the place in the scene's choreography, u the plain time since the scene began (both 0 to 1).
   function paint(f,u){
     let pose=MarbleRun.pose(Math.max(1,step),f);
     if(step===0||step===1){
-      const x=step===0?coverX:MarbleRun.mix(openerStart,150,f);
+      const x=step===0?coverX:MarbleRun.mix(openerStart,150,MarbleRun.surge(f));
       pose={...pose,x,y:MarbleRun.ground(x)-25,spin:(x+115)*180/(19*Math.PI)};
     }
     if(entryPose&&u<joinSpan){
@@ -130,6 +130,12 @@ function machine(stage,step){
       const at=MarbleRun.ride(Math.min(worry.x,MarbleRun.brink+40));
       follow=worry.anchor;
       pose={...pose,x:at.x,y:at.y,spin:(worry.x+115)*180/(19*Math.PI),tremor:.12+.88*worryLevel(worry.x)};
+    }
+    else if(step===2&&askedAt&&!reduced.matches){
+      // Nobody is told to drag. The marble rocks on the spot instead, like something that wants to be picked up.
+      const since=(performance.now()-askedAt)/1000,rock=Math.min(1,since/.8)*7*Math.sin(since*2.6);
+      const at=MarbleRun.ride(MarbleRun.brink-7+rock);
+      pose={...pose,x:at.x,y:at.y,spin:(MarbleRun.brink-7+rock+115)*180/(19*Math.PI)};
     }
     lastPose=pose;
     // Worry: the run shivers under the marble (which rides along with its section) and cracks draw themselves in ahead of it.
@@ -161,9 +167,13 @@ function machine(stage,step){
       }
     }else{
       cx=MarbleRun.mix(start[0],target[0],blend);cy=MarbleRun.mix(start[1],target[1],blend);
-      width=start[2]*Math.pow(target[2]*(mobile?(step>=5?.86:.72):1)/start[2],blend);
+      width=start[2]*Math.pow(target[2]*(mobile?(step>=5?.86:.6):1)/start[2],blend);
     }
 
+    if(step===3&&!reduced.matches){
+      const k=(pose.breakage-MarbleRun.impact())/.07;
+      if(k>0&&k<1)cy+=width*.006*(1-k)*Math.sin(k*19);
+    }
     const height=width*rect.height/Math.max(1,rect.width);
     if(step===0){
       const field=app.querySelector('#visitor').getBoundingClientRect();
@@ -199,21 +209,30 @@ function machine(stage,step){
   // No auto-advance: when the scene has played, Continue appears and the visitor clicks on.
   const section=stage.closest('section');
   const lead=hold/(duration+hold);
-  animate(duration+hold,raw=>{const u=Math.max(0,(raw-lead)/(1-lead));paint(f0+(1-f0)*settle(u),u)},()=>{
+  animate(duration+hold,raw=>{
+    const u=Math.max(0,(raw-lead)/(1-lead)),f=f0+(1-f0)*settle(u);
+    if(step===1&&f>=MarbleRun.fastAt)section.querySelector('.late')?.classList.add('now');
+    paint(f,u);
+  },()=>{
     section.classList.add('ready');
     // The worried scene keeps shivering while it waits for the click.
     if(step===2&&!reduced.matches){const idle=()=>{if(!state.paused&&!document.hidden&&!sheet.open)paint(1,1);raf=requestAnimationFrame(idle)};raf=requestAnimationFrame(idle)}
   });
 }
 function welcome(){
-  app.innerHTML='<section class="welcome opening"><div class="illustration"></div><div class="welcome-copy"><button class="face" type="button" data-about aria-label="'+esc(A.open)+'"><img src="assets/mareike.jpg" alt="Mareike Jens"></button><h1>'+esc(W.title)+'<span>'+esc(W.subtitle)+'</span></h1><p class="start-hint">'+esc(W.hint||'')+'</p><form id="entry" novalidate><div class="namebox"><input id="visitor" autocomplete="name" aria-label="'+esc(W.label)+'" placeholder="'+esc(W.label)+'"></div></form><p class="visit-notice">'+esc(W.notice||'')+'</p></div><button class="marble-start" form="entry" type="submit" aria-label="'+esc(U.start)+'"></button></section>';
+  app.innerHTML='<section class="welcome opening"><div class="illustration"></div><div class="welcome-copy"><button class="face" type="button" data-about aria-label="'+esc(A.open)+'"><img src="assets/mareike.jpg" alt="Mareike Jens"></button><h1>'+esc(W.title)+'<span>'+esc(W.subtitle)+'</span></h1><form id="entry" novalidate><div class="namebox"><input id="visitor" autocomplete="name" aria-label="'+esc(W.label)+'" placeholder="'+esc(W.label)+'"></div></form><p class="visit-notice">'+esc(W.notice||'')+'</p></div><button class="marble-start" form="entry" type="submit" aria-label="'+esc(U.start)+'"></button></section>';
   machine(app.querySelector('.illustration'),0);
   const input=document.querySelector('#visitor');input.value=state.fullName;
   app.querySelector('form').onsubmit=e=>{
     e.preventDefault();const full=input.value.trim().replace(/\s+/g,' '),parts=full.split(' ');
-    // The name is optional: without one the story simply speaks to "you" and the jar is "Your jar".
+    // The marble only starts once there is a name: nudge the field instead of rolling.
+    if(!full){
+      input.focus();
+      if(!reduced.matches)input.parentElement.animate([{translate:'0'},{translate:'-7px'},{translate:'6px'},{translate:'-3px'},{translate:'0'}],{duration:360,easing:'ease-out'});
+      return;
+    }
     const from=app.querySelector('.welcome-copy .face img').getBoundingClientRect();
-    state.fullName=full;state.name=full?parts[0]:'';openerStart=coverX;save();Track.send('start');go(1,()=>dockPortrait(from));
+    state.fullName=full;state.name=parts[0];openerStart=coverX;save();Track.send('start');go(1,()=>dockPortrait(from));
   };
 }
 // The cover portrait travels up into the header corner while shrinking; the header fades in around it.
@@ -256,7 +275,7 @@ function story(){
   // "I am." answers the question from the scene before, then the first danger follows.
   const lead=s===3?'<span class="iam">'+esc(state.worried==='yes'?S.iAmToo:S.iAm)+'</span><span class="whatif">'+esc(S.whatIf)+'</span> ':'';
   const head='<h1 tabindex="-1" class="'+(s===2?'worry':'')+'">'+lead+(lead?'<span class="answer">'+title+'</span>':title)+'</h1>'+(body?'<p>'+lateWords(body)+'</p>':'')+
-    (s===2?'<p class="answers"><span class="drag-hint">'+esc(S.worriedDrag)+'</span><b class="drag-level" aria-live="polite"></b></p>':'');
+    (s===2?'<p class="answers"><b class="drag-level" aria-live="polite"></b></p>':'');
   let section=app.querySelector('.stage.machine');
   if(!section){
     app.innerHTML='<section class="stage machine '+kind+'"><div class="headline">'+head+'</div><div class="illustration"></div>'+controls(U.next,true)+'</section>';
@@ -294,7 +313,7 @@ function bindWorry(section){
     const r=stage.getBoundingClientRect(),px=r.width/lastCamera[2];
     const mx=r.left+((lastPose.x-lastCamera[0])/lastCamera[2]+.5)*r.width,my=r.top+r.height/2+(lastPose.y-lastCamera[1])*px;
     if(Math.hypot(e.clientX-mx,e.clientY-my)>Math.max(34,26*px))return;
-    const x=worry?worry.x:MarbleRun.brink;
+    const x=worry?worry.x:lastPose.x;
     worry={x,v:0,dragging:true,released:false,anchor:worry?worry.anchor:{x:lastPose.x,y:lastPose.y},grab:railX(e)-x,last:performance.now()};
     track={x,t:performance.now(),moved:false};
     section.setPointerCapture?.(e.pointerId);say();
@@ -455,7 +474,7 @@ function go(n,after){
   }
   // "Are you worried?": the first click on that scene brings the question, the next one moves on.
   const held=from===2&&n>2&&app.querySelector('.headline:not(.leaving) .held:not(.shown)');
-  if(held){held.classList.add('shown');return}
+  if(held){held.classList.add('shown');askedAt=performance.now();return}
   state.step=n;state.paused=false;cancelAnimationFrame(raf);clearTimeout(headTimer);
   const swap=()=>{
     if(from===12)Play.unmount();

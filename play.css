@@ -141,25 +141,24 @@
 /* Short phones: tighter rows, so the five questions and Back fit without scrolling. */
 @media(max-height:720px){.ask-row{min-height:52px;padding-block:6px}.ask-stage{padding-top:14px}}
 
-/* ---------- story: the tap that moves it on, and the question a visitor can answer ---------- */
-.controls .cue{display:none;margin-left:auto;padding:10px 2px;pointer-events:none;animation:cue-breathe 2.2s ease-in-out infinite}
-.ready .controls .cue,.world:has(.flood) .controls .cue{display:block}
-@keyframes cue-breathe{0%,100%{opacity:.45}50%{opacity:1}}
-.answers{display:block;margin:18px 0 0;max-width:22em;opacity:0;transition:opacity .4s ease .3s}
+/* ---------- story: the question is answered by dragging the marble; the word shows where it stands ---------- */
+.answers{display:block;margin:14px 0 0;min-height:1.6em;opacity:0;transition:opacity .4s ease .3s}
 .headline:has(.held.shown) .answers{opacity:1}
-.drag-level{display:none;font-family:"Crete Round",Georgia,serif;font-weight:400;font-size:1.45em;color:#a32b36}
-.dragging .drag-hint{display:none}.dragging .drag-level{display:block}
+.drag-level{font-family:"Crete Round",Georgia,serif;font-weight:400;font-size:1.45em;color:#a32b36}
 .stage:has(.held.shown) .illustration{touch-action:none}
-.start-hint{margin:8px 0 0;font-size:var(--body)}
-.welcome-copy .start-hint+form{margin-top:14px}
-.start-hint:empty{display:none}
-@media(prefers-reduced-motion:reduce){.controls .cue{animation:none}}
 
-/* ---------- the ending: the jar has left, a closing card stands where the ramps are ---------- */
-.finale{position:absolute;z-index:6;left:50%;top:46%;transform:translate(-50%,0);width:min(86%,340px);padding:26px 26px 14px;border-radius:22px;background:#fffdf9;box-shadow:0 18px 40px -22px #4a3b2866,0 0 0 1px #2929280f;text-align:center}
-.finale h2{margin:0 0 8px;font-family:"Crete Round",Georgia,serif;font-weight:400;font-size:25px;letter-spacing:-.02em}
-.finale p{margin:0}
-.finale .primary{display:flex;align-items:center;justify-content:center;margin-top:18px;text-decoration:none}
+/* ---------- the ending: the visitor's jar arrives on a shelf beside Mareike ---------- */
+.finale{position:absolute;z-index:6;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 9% 6%;text-align:center;
+  background:radial-gradient(ellipse at 50% 38%,#fffcf7,#f6efe6 85%)}
+.meet{position:relative;display:flex;align-items:flex-end;justify-content:center;gap:26px;width:100%;padding:0 4% 30px;margin-bottom:34px}
+.meet-who{position:relative;z-index:1;display:grid;justify-items:center}
+.meet-who small{position:absolute;top:calc(100% + 30px);white-space:nowrap;font-size:12.5px;letter-spacing:.02em}
+.meet-bottle .bottle{--jar-scale:.62}
+.meet-bottle .cork{opacity:1;translate:0 0}
+.meet-host img{display:block;width:92px;height:92px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px #fff,0 6px 12px -5px #6e553766}
+.meet-shelf{position:absolute;left:0;right:0;bottom:0;height:42px;background:url("assets/porcelain-shelf.png") center top/100% 100% no-repeat;transform-origin:50% 0}
+.finale h2{margin:0 0 8px;font-family:"Crete Round",Georgia,serif;font-weight:400;font-size:27px;letter-spacing:-.02em}
+.finale p{margin:0;max-width:19em}
+.finale .primary{display:flex;align-items:center;justify-content:center;margin-top:22px;text-decoration:none;max-width:320px}
 .finale .subtle{margin-top:6px;background:none;border:0}
-.play-stage.sent .play-shelves,.play-stage.sent .play-art,.play-stage.sent .play-hint{opacity:.3;pointer-events:none;transition:opacity .5s}
 .play-stage.sent .send-jar,.play-stage.sent .play-back{visibility:hidden}

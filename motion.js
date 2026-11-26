@@ -18,7 +18,7 @@ const MarbleRun = (() => {
     - plungeHeight*(1-plunge(x))
     + (x>=1480?58:0)
     - .055*Math.max(0,x-1630);
-  const camera = {1:[45,143,680],2:[348,155,720],3:[800,238,1280],4:[800,238,1280],
+  const camera = {1:[45,143,680],2:[348,155,720],3:[730,248,1120],4:[730,248,1120],
     5:[650,222,740],6:[860,215,492],7:[1162,250,680],8:[1480,267,535],9:[1763,305,680]};
   const times = {1:2500,2:2200,3:1450,4:1500,5:1500,6:4400,7:2800,8:2200,9:3800};
   function railPath(a,b){
@@ -154,6 +154,10 @@ const MarbleRun = (() => {
     }
     return list;
   }
+  // Scene 1: the marble ambles for the first part, then the word "Fast." lands and it takes off.
+  // `fastAt` is the place in the scene where that happens (app.js shows the word at the same moment).
+  const fastAt=.4;
+  const surge=t=>t<fastAt?.16*t/fastAt:.16+.84*(1-(1-(t-fastAt)/(1-fastAt))**2.2);
   let plungeRun=null;
   function pose(step,f){
     const t=clamp(f);
@@ -162,7 +166,7 @@ const MarbleRun = (() => {
     const plunging=step===3&&t<fall.start;
     const breakage=step===3?(plunging?0:mix(fall.from,1,(t-fall.start)/(1-fall.start))):step===4?1-t:0;
     let x=550;
-    if(step===1)x=mix(ends[0],ends[1],t);
+    if(step===1)x=mix(ends[0],ends[1],surge(t));
     else if(step===2)x=mix(150,brink,t);
     // After the break is mended the marble rolls on towards the bridge. The bridge is as far as it gets.
     else if(step===5)x=mix(550,approach,t);
@@ -212,6 +216,6 @@ const MarbleRun = (() => {
   }
   // How visible each station marble is (0 to 1): they fade in at the top of their fall.
   const fades=p=>Object.fromEntries(p.mates.map((m,i)=>['mate'+i,m.show]));
-  return {art,pose,transforms,fades,quake,ground,ride,brink,fall,camera,times,ease,clamp,mix};
+  return {art,pose,transforms,fades,quake,ground,ride,brink,fastAt,surge,impact:()=>(typeof RunExplosion==='undefined'?require('./explosion.js'):RunExplosion).impact,fall,camera,times,ease,clamp,mix};
 })();
 if(typeof module!=='undefined')module.exports=MarbleRun;

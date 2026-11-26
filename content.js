@@ -5,7 +5,6 @@ window.IDEA_MAP = {
     "title": "Hi, I’m Mareike.",
     "subtitle": "About to lose my marbles.",
     "label": "Your name, for your marble jar",
-    "hint": "Tap the marble to set it rolling.",
     "notice": ""
   },
   "about": {
@@ -26,7 +25,6 @@ window.IDEA_MAP = {
     "worriedGuest": "What about you?",
     "worriedAsk": "Are you worried?",
     "loss": "We lose control.",
-    "worriedDrag": "Drag the marble: back if you’re calm, towards the edge if you’re worried. Then let go.",
     "worriedLevels": ["Not really", "A little", "Worried", "Very worried"],
     "iAm": "I am.",
     "iAmToo": "So am I.",
@@ -41,8 +39,6 @@ window.IDEA_MAP = {
   },
   "ui": {
     "next": "Continue",
-    "cueTap": "Tap to continue",
-    "cueClick": "Click to continue",
     "back": "Back",
     "skip": "Skip to the ideas",
     "turn": "Turn the track",
@@ -119,8 +115,10 @@ window.IDEA_MAP = {
     "sendMail": "Your jar is packed into an email to Mareike. Press send in your email app.",
     "mailSubject": "My marble jar",
     "coffeeLocal": "Pick a time in the tab that just opened. Copy your jar below and bring it along.",
-    "finaleTitle": "Sealed and sent.",
+    "finaleTitle": "See you soon, {name}.",
+    "finaleTitleGuest": "See you soon.",
     "finaleReady": "Your jar is ready to go.",
+    "finaleHost": "Mareike",
     "finaleCoffee": "Talk it through over coffee",
     "finaleStay": "Keep exploring",
     "sendFailed": "That didn’t go through. You can copy your jar and send it yourself.",

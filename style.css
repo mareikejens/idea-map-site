@@ -118,7 +118,7 @@ dialog{background:var(--studio);border:1px solid #e2d8c8;box-shadow:0 20px 80px 
   @keyframes iam-out{to{opacity:0}}
   .iam+.whatif{animation:late-in .35s 1.75s both}
   /* A [bracketed] word in the body line lands a beat after the sentence, like a spoken pause. */
-  .headline .late{animation:late-in .35s 1.6s both}
+  .headline .late{opacity:0;transition:opacity .18s ease}.headline .late.now{opacity:1}
   @keyframes late-in{from{opacity:0}to{opacity:1}}
   /* Cover → run → marble field → shelves: a cross-fade between whole screens. */
   ::view-transition-old(root),::view-transition-new(root){animation-duration:.55s;animation-timing-function:ease}
@@ -142,7 +142,7 @@ dialog{background:var(--studio);border:1px solid #e2d8c8;box-shadow:0 20px 80px 
 .answer,.headline:has(.whatif) p{opacity:0;transition:opacity .4s ease}
 .stressed .answer,.stressed .headline:has(.whatif) p{opacity:1}
 /* Tension: after the burst the screen holds on "What if…" for a moment before the answer lands, and the question follows it. */
-.stressed .answer{transition-delay:.9s}.stressed .headline:has(.whatif) p{transition-delay:.9s}
+.stressed .answer{transition-delay:.55s}.stressed .headline:has(.whatif) p{transition-delay:.95s}
 
 /* ---- Marble page ----
    Marbles are cut to clean circles with a soft shadow and arrive spreading out from the first one. After about a second they part

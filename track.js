@@ -9,7 +9,7 @@ const Track=(()=>{
   // keepalive lets the request finish even while the page is closing.
   function send(type,data={}){
     if(!endpoint||location.protocol==='file:'||!visitor)return;
-    try{fetch(endpoint,{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},
+    try{fetch(endpoint,{method:'POST',keepalive:true,
       body:JSON.stringify({visitor,name:state.fullName,type,...data,jar:[...state.picked]})}).catch(()=>{})}catch{}
   }
   return {send,get visitor(){return visitor}};
