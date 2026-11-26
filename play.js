@@ -381,7 +381,7 @@ const Play=(()=>{
       '<label class="hp" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>'+
       '<button class="primary">'+esc(sealed?U.sendAgain:U.sendButton)+'</button>'+
       (booking?'<p class="send-or">'+esc(U.sendOr)+'</p><button type="button" class="coffee">'+esc(U.coffee)+'</button><p class="coffee-hint">'+esc(U.coffeeHint)+'</p>':'')+
-      '<p class="send-status" role="status">'+(sealed?esc(U.sendDone):'')+'</p><p class="fine">'+esc(U.sendPrivacy)+'</p></form>');
+      '<p class="send-status" role="status">'+(sealed?esc(U.sendDone):'')+'</p><p class="fine">'+esc(U.sendPrivacy)+' '+legalLink()+'</p></form>');
     const form=detail.querySelector('form');
     form.onsubmit=e=>{e.preventDefault();send(form,false)};
     form.email.oninput=()=>{form.querySelector('.send-status').textContent=''};
