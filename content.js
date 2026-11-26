@@ -18,6 +18,28 @@ window.IDEA_MAP = {
     "email": "mareike.jens@gmail.com",
     "bookLabel": "Book a meeting"
   },
+  "legal": {
+    "imprint": {
+      "title": "Imprint",
+      "sections": [
+        ["", "Mareike Jens\n[STREET AND NUMBER]\n[POSTCODE] Zürich, Switzerland"],
+        ["Contact", "mareike.jens@gmail.com"],
+        ["", "Responsible for the content of this site: Mareike Jens."]
+      ]
+    },
+    "privacy": {
+      "title": "Privacy",
+      "sections": [
+        ["Who is responsible", "Mareike Jens, address as in the imprint. Questions and requests: mareike.jens@gmail.com."],
+        ["On your device", "Your name and your jar are kept in this browser tab so the site remembers them. They are gone when you close the tab. No cookies, no advertising or analytics networks."],
+        ["What I record while you visit", "Which ideas you open, how long a card stays open, what goes into your jar and your answer to “Are you worried?”. This is stored with the name you entered on the first page and a random visit number, also if you never send your jar. I use it to improve the ideas and this site, and to prepare our conversation."],
+        ["What you send me", "When you send your jar or book a coffee: your name, your email address, your marbles, the ideas you added and your note. I use this to reply to you and to prepare our conversation."],
+        ["Where it is kept", "In a Google Sheet in my Google account, and coffee bookings in Google Calendar (Google, which may process data in the USA). The site is hosted on GitHub Pages (GitHub, USA), which logs IP addresses to deliver and protect the site."],
+        ["How long", "Until our conversation is over, and at most 12 months."],
+        ["Your rights", "You can ask what I hold about you, have it corrected or deleted, and object to the recording at any time: write to the address above. Swiss data protection law (FADP) applies, and the GDPR where it covers you. The basis is my legitimate interest in improving this site and, for what you send, your request. You may also complain to the Swiss FDPIC or your local data protection authority."]
+      ]
+    }
+  },
   "story": {
     "intro": "Transformative AI is coming.",
     "introBody": "It’s going to change how we live and work. [Fast.]",

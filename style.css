@@ -241,3 +241,9 @@ html{touch-action:manipulation}.machine{user-select:none;-webkit-user-select:non
 /* "Are you worried?": the closer the marble is dragged to the edge (--worry, 0 to 1, set in app.js), the redder the page. */
 .machine .illustration{box-shadow:inset 0 0 calc(var(--worry,0)*150px) calc(var(--worry,0)*26px) #a32b3659}
 .drag-level{transform-origin:0 50%;scale:calc(1 + var(--worry,0)*.5);transition:scale .15s linear}
+
+/* Legal footer: one thin, quiet line under every screen. app.js keeps the screens 22px shorter to make room for it. */
+.legal{position:fixed;z-index:5;inset:auto 0 0;height:22px;display:flex;align-items:center;justify-content:center;gap:16px;font-size:10.5px;letter-spacing:.03em;color:#8c877f;background:var(--paper)}
+.legal button{font:inherit;letter-spacing:inherit;color:inherit;padding:4px 2px;touch-action:manipulation}
+.legal button:hover,.legal button:focus-visible{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.legal-text h3{margin:16px 0 3px;font-size:14px;font-weight:600}.legal-text p{margin:0 0 6px;font-size:14px;line-height:1.45}
