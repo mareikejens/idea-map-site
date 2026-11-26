@@ -134,7 +134,9 @@
 .ask-nav{margin-top:22px}
 /* Back sits at the bottom of the screen, where the story and the marble page have it. */
 .ask-stage{min-height:100%;display:flex;flex-direction:column}
-.ask-nav{margin-top:auto;padding-top:22px}
+.ask-nav{margin-top:auto}
+/* The rows share the free height: equal gaps between the heading, each row and Back (never less than 6px). */
+.ask-list{flex:1;align-content:space-evenly;margin-top:0;gap:6px;padding-block:6px}
 @media(max-width:720px){.ask-stage{padding-bottom:24px}.ask-nav{margin-left:calc(7vw - 18px)}}
 /* Short phones: tighter rows, so the five questions and Back fit without scrolling. */
-@media(max-height:720px){.ask-row{min-height:52px;padding-block:6px}.ask-list{gap:6px;margin-top:14px}.ask-stage{padding-top:14px}}
+@media(max-height:720px){.ask-row{min-height:52px;padding-block:6px}.ask-stage{padding-top:14px}}
