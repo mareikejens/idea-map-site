@@ -106,16 +106,24 @@ function logEvent(d) {
 // ---- Dashboard ------------------------------------------------------------------------------------------------
 // A "Dashboard" tab in this Sheet, rewritten after every event and every jar: how many people came, how long they stayed,
 // which marbles they opened and what went into their jars. Nothing to set up: the tab appears with the next visit (or run
-// refreshDashboard once in the editor). To leave out your own test visits, type a date into cell B2 of that tab: only
-// visits from that day on are counted. Everything else on the tab is overwritten each time, so do not edit it by hand.
+// refreshDashboard once in the editor). To leave out your own test visits, type a date and time into cell B2 of that tab: only
+// visits from then on are counted, and the tab recalculates at once (onEdit). Everything else on the tab is overwritten each time, so do not edit it by hand.
 const DASHBOARD = 'Dashboard';
 const BREAK_MINUTES = 10;                            // a pause longer than this does not count as time on the site
 const TEST_VISITOR = /^(claude-check|setuptest)/;   // visits made by the setup checks: never counted
 const TEST_NAME = /test/i;                           // a visitor who gave a name with "test" in it (Test, Mareike Test, Setup test ...): never counted
 
+// Runs by itself whenever someone edits the Sheet by hand (a "simple trigger": no setup, no permission to give). Typing a date
+// into B2 of the Dashboard tab recalculates it at once; any other edit does nothing.
+function onEdit(e) {
+  const cell = e && e.range;
+  if (cell && cell.getSheet().getName() === DASHBOARD && cell.getA1Notation() === 'B2') refreshDashboard();
+}
+
 function refreshDashboard() {
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(2000)) return;                   // another visit is rewriting the tab right now: that one will do
+  // One rewrite at a time. If locking is not available (a simple trigger may not be allowed to), carry on without it.
+  let lock = null;
+  try { lock = LockService.getScriptLock(); if (!lock.tryLock(2000)) return; } catch (err) { lock = null; }   // another rewrite is running: that one will do
   try {
     const book = SpreadsheetApp.getActiveSpreadsheet();
     const rows = name => { const t = book.getSheetByName(name); return t ? t.getDataRange().getValues().slice(1) : []; };
@@ -129,7 +137,7 @@ function refreshDashboard() {
     tab.getRange('B2').setNumberFormat('dd/mm/yyyy').setBackground('#fff8e1');   // the one cell meant for typing
     tab.setColumnWidth(1, 260);
     tab.setColumnWidths(2, 8, 150);                  // wide enough for the column headings and the date in D1
-  } finally { lock.releaseLock(); }
+  } finally { if (lock) { try { lock.releaseLock(); } catch (err) {} } }
 }
 
 // Turns the raw rows of "Events" and "Jars" (without their header rows) into the numbers on the dashboard.
