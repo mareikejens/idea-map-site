@@ -127,6 +127,7 @@ function refreshDashboard() {
     tab.getRangeList(page.dates).setNumberFormat('dd/mm/yyyy hh:mm').setHorizontalAlignment('left');
     tab.getRange('B2').setNumberFormat('dd/mm/yyyy').setBackground('#fff8e1');   // the one cell meant for typing
     tab.setColumnWidth(1, 260);
+    tab.setColumnWidths(2, 8, 150);                  // wide enough for the column headings and the date in D1
   } finally { lock.releaseLock(); }
 }
 
@@ -211,7 +212,7 @@ function dashboardRows(s, from, now) {
   title('Marbles');
   header(['Marble', 'Visitors who opened it', 'Times opened', 'Put in a jar', 'Taken out again', 'Seconds read (all visitors)']);
   for (const m of s.marbles) rows.push([m.title, m.visitors, m.opens, m.adds, m.removes, m.seconds]);
-  title('Concern picked on "What are you most concerned about?"');
+  title('Concern picked on the concern screen');
   header(['Concern', 'Visitors']);
   for (const c of s.concerns) rows.push([c.title, c.visitors]);
   title('Visitors, latest first');

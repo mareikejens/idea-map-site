@@ -52,7 +52,7 @@ current, also on a phone. It shows:
 - **Overview:** unique visitors, how many started the story, reached the marbles, opened a marble, filled and sent a jar,
   and the median and average time on the site.
 - **Marbles:** per marble, how many visitors opened it, how often, how often it went into a jar, and the seconds it was read.
-- **Concern picked** on "What are you most concerned about?".
+- **Concern picked** on "What concerns you most?".
 - **Visitors**, latest first: time on the site, answers, marbles opened and in the jar, whether the jar was sent.
 
 Good to know:
