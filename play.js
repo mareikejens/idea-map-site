@@ -62,12 +62,12 @@ const Play=(()=>{
   }
 
   // ---------- the screen ----------
-  // The shelves hold the ideas and, as the last marble, a grey one that opens "Add your own". Three marbles per shelf at most,
-  // spread evenly (7 → 3+2+2, 4 → 2+2), so no shelf is left with a single marble.
+  // The shelves hold the ideas and, as the last marble, a grey one that opens "Add your own". Never more than two shelves,
+  // marbles spread evenly (7 → 4+3, 5 → 3+2, 4 → 2+2), so no shelf is left with a single marble.
   function shelfRows(list){
     const items=[...list.map(i=>'<button class="pick" data-id="'+esc(i.id)+'">'+ball(i)+'<span class="pick-name">'+esc(i.title)+'</span></button>'),
       '<button class="pick add-own"><span class="ball own" aria-hidden="true"></span><span class="pick-name">'+esc(U.ownAdd)+'</span></button>'];
-    const shelves=Math.ceil(items.length/3),base=Math.floor(items.length/shelves),extra=items.length%shelves;
+    const shelves=Math.min(2,Math.ceil(items.length/3)),base=Math.floor(items.length/shelves),extra=items.length%shelves;
     let html='',at=0;
     for(let k=0;k<shelves;k++){const n=base+(k<extra?1:0);html+='<div class="rail" style="--slots:'+n+'">'+items.slice(at,at+n).join('')+'</div>';at+=n}
     return html;
