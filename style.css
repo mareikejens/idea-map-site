@@ -255,3 +255,6 @@ html{touch-action:manipulation}.machine{user-select:none;-webkit-user-select:non
 /* Desktop about card: wide enough (37em of text, so it scales with the font) that the lead takes two lines and
    "Based in Zürich…" one. The phone card keeps its own width (max-width:700px rule above). */
 @media(min-width:701px){dialog:has(.about){width:min(calc(37em + 70px),93vw)}}
+/* The cover line "About to lose my marbles." stays on one line on every phone: the headline shrinks with the screen below 360px (and with Safari page zoom). */
+/* The photo is as wide as "Hi, I'm Mareike." (that line is 6.75 times the headline size). */
+@media(max-width:700px){.welcome h1{font-size:min(26px,7.2vw)}.welcome h1 span{white-space:nowrap}.welcome-copy .face img{width:calc(min(26px,7.2vw)*6.75);height:auto;aspect-ratio:1}}
