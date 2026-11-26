@@ -219,7 +219,7 @@ window.IDEA_MAP = {
       "title": "We stop thinking",
       "runLabel": "We will [stop] thinking.",
       "tint": "#3951d8",
-      "question": "Do we get brain rot when every answer is one prompt away?",
+      "question": "What do we lose when thinking becomes optional?",
       "openSlots": 0,
       "ideas": [
         {
