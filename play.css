@@ -4,19 +4,19 @@
 
 /* header: which problem you are looking at, and how to move between the five */
 .play .play-head{display:block;padding:10px 18px 0;position:relative;z-index:2}
-.area-row{display:flex;align-items:center;gap:2px;height:36px}
-.play .area-kicker{margin:0 auto 0 0;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:color-mix(in srgb,var(--tint) 62%,#3b342c);transition:color .4s}
-.area-step{width:40px;height:40px;margin-right:-8px;border-radius:50%;font-size:25px;line-height:1;color:var(--ink);transition:color .2s,background .2s}
-.area-step:hover,.area-step:active{color:var(--ink);background:#efe6d9}
+
+
+
+
 .play .play-head h1{font-size:clamp(25px,7vw,31px);max-width:none;margin-top:0;line-height:1.1;letter-spacing:-.03em}
-.areas{display:flex;gap:5px;margin-top:10px}
-.area-dot{flex:1;height:26px;padding:0;display:flex;align-items:center}
-.area-dot i{display:block;position:relative;width:100%;height:4px;border-radius:2px;background:#e6dccd;overflow:hidden;transition:height .25s var(--motion-ease)}
-.area-dot i:after{content:"";position:absolute;inset:0;width:calc(var(--done,0)*100%);background:var(--tint);opacity:.5;border-radius:2px;transition:width .5s var(--motion-ease),opacity .3s}
-.area-dot.current i{height:6px;border-radius:3px;background:color-mix(in srgb,var(--tint) 22%,#eee5d8)}
-.area-dot.current i:after{opacity:1}
-.play .play-hint{margin:4px 0 0;font-size:13.5px;line-height:1.35;color:var(--muted);min-height:2.7em;transition:color .3s}
-.play .play-hint.nudge{color:#805020}
+
+
+
+
+
+
+
+
 
 /* shelves */
 .play-shelves{display:grid;gap:8px;padding:2px 12px 0;position:relative;z-index:2}
@@ -75,7 +75,7 @@
 .mast span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 @media(max-height:700px){
-  .play .play-hint{min-height:1.4em;font-size:12.5px}.areas{margin-top:4px}
+  
   .play-stage{--jar-scale:.78}.play .pick-name{-webkit-line-clamp:2}
 }
 
@@ -159,13 +159,6 @@
 .finale .subtle{margin-top:6px;background:none;border:0}
 .play-stage.sent .send-jar,.play-stage.sent .play-back{visibility:hidden}
 
-/* The five problems as five marbles, the same ones as on the question screen: it is plain that there are five and which
-   one is open. The line under each fills up as its ideas are read. */
-.areas{gap:2px;margin-top:6px;align-items:flex-end}
-.area-dot{height:44px;flex-direction:column;justify-content:flex-end;gap:5px}
-.area-dot .ball{--diam:24px;opacity:.62;filter:saturate(.85);transition:width .25s var(--motion-ease),height .25s var(--motion-ease),opacity .25s,filter .25s}
-.area-dot.current .ball{--diam:32px;opacity:1;filter:none}
-.area-dot i{width:70%}
 /* A marble of the next and the previous problem looks in from the edges of the screen, level with the top shelf. */
 /* The button lies wholly inside the screen and clips its marble. (A button that sticks out past the edge makes the browser
    scroll the whole page sideways when it takes the focus.) */
@@ -194,3 +187,16 @@ dialog:has(.own-form){overflow:hidden;max-height:none;padding:18px 20px 18px}
 
 /* The one written hint, under "What would you like to talk about?": you can pick more than one. */
 .ask-sub{margin:10px 0 18px;color:#6f6a63}
+
+/* Where you are among the five problems: five dots in their colours under the shelves; the open one is a short bar.
+   A dot grows more opaque as its ideas are read (--done, set in refresh). Tapping a dot opens that problem. */
+.problem-dots{display:flex;justify-content:center;gap:4px;margin:4px 0 0}
+.problem-dots button{position:relative;width:24px;height:24px;padding:0}
+.problem-dots button:before{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;translate:-50% -50%;border-radius:4px;background:var(--tint);opacity:calc(.3 + .4*var(--done,0));transition:width .3s var(--motion-ease),opacity .3s}
+.problem-dots button.current:before{width:22px;opacity:1}
+/* A faint arrow beside each edge marble: there is more to either side. */
+.area-peek i{position:absolute;top:50%;translate:0 -54%;font:400 20px/1 "Average Sans",sans-serif;font-style:normal;color:#b3ab9f;pointer-events:none}
+.area-peek[data-step="-1"] i{left:21px}.area-peek[data-step="1"] i{right:21px}
+/* The title gets air: away from the site bar above and from the top shelf below (less on short screens). */
+.play .play-head{padding-top:clamp(10px,3.2vh,28px)}
+.play .play-head h1{margin-bottom:clamp(4px,2.2vh,20px)}

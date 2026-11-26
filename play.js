@@ -74,16 +74,18 @@ const Play=(()=>{
   }
   function renderArea(){
     const g=groups[state.area],list=ideas.filter(i=>i.g===state.area&&!i.own);
-    stage.querySelector('.area-kicker').textContent=fill(U.areaOf,{n:state.area+1,total:groups.length});
     stage.querySelector('.play-head h1').textContent=g.title;
-    stage.querySelector('.play-shelves').innerHTML=shelfRows(list);
+    // The dots live inside the shelves block, so the ramp and the physics (which measure from its bottom) stay clear of them.
+    stage.querySelector('.play-shelves').innerHTML=shelfRows(list)+
+      '<nav class="problem-dots">'+groups.map((p,k)=>'<button data-area="'+k+'" style="--tint:'+p.tint+'"></button>').join('')+'</nav>';
+    for(const dot of stage.querySelectorAll('.problem-dots button'))dot.onclick=()=>setArea(+dot.dataset.area);
     stage.style.setProperty('--tint',g.tint);
     for(const b of stage.querySelectorAll('.pick:not(.add-own)'))bindPick(b);
     stage.querySelector('.add-own').onclick=()=>{Sound.wake();openOwn()};
     seenAreas.add(state.area);
     // The shelves go on to both sides: a marble of the neighbouring problem looks in from each edge of the screen.
     // Until the visitor has moved once, the one on the right keeps rolling in a little (play.css, "fresh").
-    for(const peek of stage.querySelectorAll('.area-peek'))peek.innerHTML=ball({g:(state.area+ +peek.dataset.step+groups.length)%groups.length,shade:0});
+    for(const peek of stage.querySelectorAll('.area-peek'))peek.innerHTML=ball({g:(state.area+ +peek.dataset.step+groups.length)%groups.length,shade:0})+'<i aria-hidden="true">'+(peek.dataset.step<0?'‹':'›')+'</i>';
     stage.classList.toggle('fresh',seenAreas.size<2);
   }
   function refresh(){
@@ -107,10 +109,11 @@ const Play=(()=>{
     stage.querySelector('.play-jar').classList.toggle('sealed',sealed);
     stage.querySelector('.play-jar').classList.toggle('filled',count>0);
   }
-  function hint(text,hold=5200){
-    const p=stage.querySelector('.play-hint');clearTimeout(hintTimer);
-    p.textContent=text;p.classList.toggle('nudge',hold>0);
-    if(hold>0)hintTimer=setTimeout(()=>{if(stage){p.textContent=U.hintDrop;p.classList.remove('nudge')}},hold);
+  // No written hints on the page (visual cues only). The few moments that still deserve words are said to screen readers.
+  function hint(text){const p=stage.querySelector('.play-live');if(p)p.textContent=text}
+  function areaKeys(e){
+    if(!stage||sheet.open||e.altKey||e.ctrlKey||e.metaKey||e.target.closest?.('input,textarea,select'))return;
+    if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();setArea(state.area+(e.key==='ArrowRight'?1:-1))}
   }
   // Say something once, the first time it becomes relevant.
   function tell(key,text){if(told.has(key))return;told.add(key);hint(text,7000)}
@@ -505,11 +508,10 @@ const Play=(()=>{
     try{sessionStorage.setItem('idea-map-reached','yes')}catch{}       // a reload brings the visitor back here (see the end of app.js)
     if(!asked)return ask();
     app.innerHTML='<section class="world play"><div class="play-stage">'+
-      '<header class="play-head"><div class="area-row"><p class="area-kicker"></p>'+
-      '<button class="area-step" data-step="-1" aria-label="'+esc(U.areaPrev)+'">‹</button><button class="area-step" data-step="1" aria-label="'+esc(U.areaNext)+'">›</button></div>'+
-      '<h1 tabindex="-1"></h1>'+
-      '<nav class="areas">'+groups.map((g,k)=>'<button class="area-dot" data-area="'+k+'" style="--tint:'+g.tint+'">'+ball({g:k,shade:0})+'<i></i></button>').join('')+'</nav>'+
-      '<p class="play-hint"></p></header>'+
+      // One way to move between the five problems: they lie side by side. A marble of the next one looks in at each
+      // edge with a faint arrow (tap it, swipe, or ← →), and five dots in the problem colours under the shelves say
+      // where you are. No counter, no tab row, no written hint (see renderArea and the end of mount).
+      '<header class="play-head"><h1 tabindex="-1"></h1></header>'+
       '<div class="play-shelves"></div>'+
       '<button class="area-peek" data-step="-1" aria-label="'+esc(U.areaPrev)+'"></button><button class="area-peek" data-step="1" aria-label="'+esc(U.areaNext)+'"></button>'+
       '<svg class="play-art" aria-hidden="true"></svg>'+
@@ -521,10 +523,11 @@ const Play=(()=>{
     stage=app.querySelector('.play-stage');art=stage.querySelector('.play-art');
     engine=Engine.create({gravity:{x:0,y:GRAVITY},positionIterations:8});statics=[];
     Events.on(engine,'collisionStart',collide);
-    renderArea();remountJar();layout();refresh();hint(U.hintDrop,0);
+    renderArea();remountJar();layout();refresh();
     Track.send('game');
-    for(const dot of stage.querySelectorAll('.area-dot'))dot.onclick=()=>setArea(+dot.dataset.area);
-    for(const b of stage.querySelectorAll('.area-step,.area-peek'))b.onclick=()=>setArea(state.area+ +b.dataset.step);
+    for(const b of stage.querySelectorAll('.area-peek'))b.onclick=()=>setArea(state.area+ +b.dataset.step);
+    // ← → move between the problems too (the story's own arrow keys stop before this screen).
+    document.removeEventListener('keydown',areaKeys);document.addEventListener('keydown',areaKeys);
     stage.querySelector('.play-jar').onclick=openJar;
     stage.querySelector('.send-jar').onclick=openSend;
     // Swiping sideways anywhere on the page moves between areas. A swipe that starts on a marble or a button stays
@@ -555,6 +558,7 @@ const Play=(()=>{
     if(state.step!==12){asked=false;try{sessionStorage.removeItem('idea-map-asked');sessionStorage.removeItem('idea-map-reached')}catch{}}   // leaving for the story: ask again next time
     if(!stage)return;
     cancelAnimationFrame(frame);frame=0;clearTimeout(hintTimer);loose.clear();stage=null;engine=null;
+    document.removeEventListener('keydown',areaKeys);
     document.querySelector('#mastTools').innerHTML='';
   }
   sheet.addEventListener('close',closeCard);
