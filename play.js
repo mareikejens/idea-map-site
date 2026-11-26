@@ -429,8 +429,8 @@ const Play=(()=>{
   }
 
   // ---------- the ending ----------
-  // The jar is corked and lifted off the page. Then the closing picture: one porcelain shelf, the visitor's jar (their own
-  // marbles in it) arriving from the left and coming to rest beside Mareike's portrait. "Keep exploring" brings the game back.
+  // The jar is corked and lifted off the page. Then the closing screen: Mareike's portrait and a goodbye by name.
+  // "Keep exploring" brings the game back.
   let leaving=null;
   function finale(text,unsent){
     if(sheet.open)sheet.close();
@@ -438,29 +438,21 @@ const Play=(()=>{
     endFinale(true);
     const jar=stage.querySelector('.play-jar'),booking=window.IDEA_MAP.send?.bookingUrl;
     const card=document.createElement('div');card.className='finale';card.setAttribute('role','status');
-    card.innerHTML='<div class="meet"><div class="meet-who meet-jar"><span class="meet-bottle"></span><small>'+esc(jarTitle())+'</small></div>'+
-      '<div class="meet-who meet-host"><img src="assets/mareike.jpg" alt=""><small>'+esc(U.finaleHost)+'</small></div><i class="meet-shelf"></i></div>'+
+    card.innerHTML='<img class="meet-host" src="assets/mareike.jpg" alt="'+esc(A.name)+'">'+
       '<h2>'+esc(unsent?U.finaleReady:state.name?named(U.finaleTitle):U.finaleTitleGuest)+'</h2><p>'+esc(text)+'</p>'+
       (booking?'<a class="primary" href="'+esc(booking)+'" target="_blank" rel="noopener">'+esc(U.finaleCoffee)+'</a>':'')+
       '<button class="subtle" type="button">'+esc(U.finaleStay)+'</button>';
-    // The jar in the picture is a copy of the real one, marbles and all, so it is recognisably theirs.
-    const copy=jar.querySelector('.bottle').cloneNode(true);copy.removeAttribute('aria-hidden');
-    card.querySelector('.meet-bottle').append(copy);
     stage.append(card);stage.classList.add('sent');jar.classList.add('sealed');
     card.querySelector('button').onclick=()=>endFinale();
     if(reduced.matches)return;
     const soft='cubic-bezier(.2,.8,.2,1)';
     // 1. cork in (the "sealed" style), 2. the jar dips as if picked up and leaves through the top, 3. the page clears,
-    // 4. the jar arrives on the shelf and rocks to a stop, 5. Mareike is there, 6. the words.
+    // 4. Mareike is there, 5. the words.
     leaving=jar.animate([{transform:'none'},{transform:'translateY(9px)',offset:.2,easing:'cubic-bezier(.55,0,.9,.45)'},{transform:'translateY(-125vh) rotate(7deg)'}],{duration:1300,delay:600,fill:'forwards'});
     card.animate([{opacity:0},{opacity:1}],{duration:450,delay:1250,fill:'backwards'});
-    card.querySelector('.meet-shelf').animate([{opacity:0,transform:'scaleX(.6)'},{opacity:1,transform:'none'}],{duration:600,delay:1400,easing:soft,fill:'backwards'});
-    card.querySelector('.meet-host').animate([{opacity:0,transform:'translateY(-16px)'},{opacity:1,transform:'none'}],{duration:520,delay:1750,easing:soft,fill:'backwards'});
-    card.querySelector('.meet-jar').animate([{opacity:0,transform:'translateX(-62vw) rotate(-5deg)'},{opacity:1,transform:'translateX(-40vw) rotate(-4deg)',offset:.12},
-      {transform:'translateX(6px) rotate(2.5deg)',offset:.78,easing:'ease-in-out'},{transform:'translateX(-2px) rotate(-1deg)',offset:.9,easing:'ease-in-out'},{transform:'none'}],
-      {duration:1500,delay:2050,easing:'cubic-bezier(.25,.6,.3,1)',fill:'backwards'});
+    card.querySelector('.meet-host').animate([{opacity:0,transform:'scale(.82)'},{opacity:1,transform:'none'}],{duration:620,delay:1550,easing:soft,fill:'backwards'});
     for(const [n,el] of [...card.querySelectorAll('h2,p,.primary,.subtle')].entries())
-      el.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:480,delay:3350+n*110,easing:'ease-out',fill:'backwards'});
+      el.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:480,delay:2050+n*110,easing:'ease-out',fill:'backwards'});
   }
   function endFinale(quiet){
     leaving?.cancel();leaving=null;

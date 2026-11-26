@@ -119,7 +119,6 @@ window.IDEA_MAP = {
     "finaleTitle": "See you soon, {name}.",
     "finaleTitleGuest": "See you soon.",
     "finaleReady": "Your jar is ready to go.",
-    "finaleHost": "Mareike",
     "finaleCoffee": "Talk it through over coffee",
     "finaleStay": "Keep exploring",
     "sendFailed": "That didn’t go through. You can copy your jar and send it yourself.",

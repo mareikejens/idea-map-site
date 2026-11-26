@@ -150,16 +150,10 @@
 @keyframes hint-nudge{0%{color:#a32b36;translate:0 0}25%{translate:6px 0}50%{translate:-3px 0}100%{color:inherit;translate:0 0}}
 .stage:has(.held.shown) .illustration{touch-action:none}
 
-/* ---------- the ending: the visitor's jar arrives on a shelf beside Mareike ---------- */
+/* ---------- the ending: the jar has gone to Mareike ---------- */
 .finale{position:absolute;z-index:6;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 9% 6%;text-align:center;
   background:radial-gradient(ellipse at 50% 38%,#fffcf7,#f6efe6 85%)}
-.meet{position:relative;display:flex;align-items:flex-end;justify-content:center;gap:26px;width:100%;padding:0 4% 30px;margin-bottom:34px}
-.meet-who{position:relative;z-index:1;display:grid;justify-items:center}
-.meet-who small{position:absolute;top:calc(100% + 30px);white-space:nowrap;font-size:12.5px;letter-spacing:.02em}
-.meet-bottle .bottle{--jar-scale:.62}
-.meet-bottle .cork{opacity:1;translate:0 0}
-.meet-host img{display:block;width:92px;height:92px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px #fff,0 6px 12px -5px #6e553766}
-.meet-shelf{position:absolute;left:0;right:0;bottom:0;height:42px;background:url("assets/porcelain-shelf.png") center top/100% 100% no-repeat;transform-origin:50% 0}
+.meet-host{display:block;width:132px;height:132px;margin-bottom:26px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px #fff,0 3px 12px #6e553723}
 .finale h2{margin:0 0 8px;font-family:"Crete Round",Georgia,serif;font-weight:400;font-size:27px;letter-spacing:-.02em}
 .finale p{margin:0;max-width:19em}
 .finale .primary{display:flex;align-items:center;justify-content:center;margin-top:22px;text-decoration:none;max-width:320px}
