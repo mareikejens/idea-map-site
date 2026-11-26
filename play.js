@@ -392,7 +392,7 @@ const Play=(()=>{
     if(valid)state.email=email;
     save();refresh();
     const picked=[...state.picked].map(byId),note=form.note.value.trim();
-    const payload={visitor:Track.visitor,name:state.fullName,email:valid?email:'',note,coffee,reading:reading().text,website:form.website.value,
+    const payload={visitor:Track.visitor,name:state.fullName,email:valid?email:'',note,coffee,worried:state.worried,reading:reading().text,website:form.website.value,
       ideas:picked.filter(i=>!i.own).map(i=>({id:i.id,title:i.title,problem:i.group.title})),
       own:picked.filter(i=>i.own).map(i=>({title:i.title,note:i.note,problem:i.group.title}))};
     const endpoint=window.IDEA_MAP.send?.endpoint;
@@ -403,9 +403,17 @@ const Play=(()=>{
       if(!response.ok)throw new Error('refused');
       state.sent=signature();save();refresh();
       status.textContent=coffee?U.coffeeDone:U.sendDone;button.textContent=U.sendAgain;Sound.land();
+      finale(coffee?U.coffeeDone:U.sendDone);
     }catch{
       // No backend, or it is down: the visitor can still get their jar to Mareike by hand.
-      status.textContent=U.sendFailed;
+      // Without a backend at all, a plain send hands the jar to the visitor's own email app, addressed and written.
+      // That is not "sent" yet (they still press send there), so the ending says exactly that.
+      const byMail=!endpoint&&!coffee&&A.email;
+      if(byMail){
+        location.href='mailto:'+A.email+'?subject='+encodeURIComponent(U.mailSubject)+'&body='+encodeURIComponent(jarText(note));
+        finale(U.sendMail,true);
+      }
+      status.textContent=byMail?U.sendMail:coffee&&!endpoint?U.coffeeLocal:U.sendFailed;
       if(!form.querySelector('.copy-jar')){
         const copy=document.createElement('button');copy.type='button';copy.className='subtle copy-jar';copy.textContent=U.copy;
         copy.onclick=async()=>{
@@ -416,6 +424,34 @@ const Play=(()=>{
       }
     }
     button.disabled=false;
+  }
+
+  // ---------- the ending ----------
+  // The jar is corked, lifted off the page and a closing card takes its place. "Keep exploring" brings the jar back.
+  let leaving=null;
+  function finale(text,unsent){
+    if(sheet.open)sheet.close();
+    if(!stage)return;
+    endFinale(true);
+    const jar=stage.querySelector('.play-jar'),booking=window.IDEA_MAP.send?.bookingUrl;
+    const card=document.createElement('div');card.className='finale';card.setAttribute('role','status');
+    card.innerHTML='<h2>'+esc(unsent?U.finaleReady:U.finaleTitle)+'</h2><p>'+esc(text)+'</p>'+
+      (booking?'<a class="primary" href="'+esc(booking)+'" target="_blank" rel="noopener">'+esc(U.finaleCoffee)+'</a>':'')+
+      '<button class="subtle" type="button">'+esc(U.finaleStay)+'</button>';
+    stage.append(card);stage.classList.add('sent');jar.classList.add('sealed');
+    card.querySelector('button').onclick=()=>endFinale();
+    if(reduced.matches)return;
+    // First the cork goes in (the "sealed" style), then the jar dips as if picked up and leaves through the top.
+    leaving=jar.animate([{transform:'none'},{transform:'translateY(9px)',offset:.2,easing:'cubic-bezier(.55,0,.9,.45)'},{transform:'translateY(-125vh) rotate(7deg)'}],{duration:1500,delay:700,fill:'forwards'});
+    card.animate([{opacity:0,transform:'translate(-50%,14px)'},{opacity:1,transform:'translate(-50%,0)'}],{duration:520,delay:1750,easing:'ease-out',fill:'backwards'});
+  }
+  function endFinale(quiet){
+    leaving?.cancel();leaving=null;
+    if(!stage)return;
+    const card=stage.querySelector('.finale');
+    if(!card)return;
+    card.remove();stage.classList.remove('sent');refresh();
+    if(!quiet&&!reduced.matches)stage.querySelector('.play-jar').animate([{transform:'translateY(-60vh)'},{transform:'none'}],{duration:620,easing:'cubic-bezier(.3,.9,.3,1.12)'});
   }
 
   // ---------- start and stop ----------
@@ -477,6 +513,7 @@ const Play=(()=>{
     stage.onpointercancel=()=>{swipe=null};
   }
   function unmount(){
+    leaving?.cancel();leaving=null;
     if(state.step!==12){asked=false;try{sessionStorage.removeItem('idea-map-asked');sessionStorage.removeItem('idea-map-reached')}catch{}}   // leaving for the story: ask again next time
     if(!stage)return;
     cancelAnimationFrame(frame);frame=0;clearTimeout(hintTimer);loose.clear();stage=null;engine=null;

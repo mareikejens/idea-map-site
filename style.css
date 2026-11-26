@@ -205,7 +205,7 @@ dialog{background:var(--studio);border:1px solid #e2d8c8;box-shadow:0 20px 80px 
 @media(max-width:700px){
   dialog:has(.card-sections){max-height:96svh;padding:43px 22px 14px}
   /* A fixed height, not an aspect ratio: inside the card's column layout the picture would otherwise insist on its full 3:2 height. */
-  dialog:has(.card-sections) .card-scene:not(.missing){margin:-43px -22px -34px;aspect-ratio:auto;height:38vw;min-height:0;flex:none}
+  dialog:has(.card-sections) .card-scene:not(.missing){margin:-43px -22px -34px;aspect-ratio:auto;height:54vw;min-height:0;flex:none}
   .detail:has(.card-sections)>.ball{--diam:54px;margin-bottom:8px}
   .detail:has(.card-sections)>.cat{margin-bottom:2px;font-size:13.5px}
   .detail:has(.card-sections)>h2{margin:0 0 4px;font-size:23px}

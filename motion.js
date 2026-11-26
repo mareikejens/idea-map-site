@@ -68,14 +68,19 @@ const MarbleRun = (() => {
     foot(westBank)+foot(eastBank)+rail(712,westBank)+rail(eastBank,1007)+leaf('bridgeLeft',westBank,bridgeCentre-1)+leaf('bridgeRight',eastBank,bridgeCentre+1),
     foot(1070)+foot(1280)+rail(1012,1328)+'<path d="M'+(gateX-7)+' '+(ground(gateX)+1)+' V'+gateY+'" stroke="#e1d1bc" stroke-width="8" stroke-linecap="round"/><g id="gate"><rect x="'+(gateX-4)+'" y="'+gateY+'" width="8" height="69" rx="4" fill="url(#ash)"/></g><circle cx="'+gateX+'" cy="'+gateY+'" r="5" fill="#c6a786"/>',
     foot(1363)+foot(1424)+rail(1332,1441)+foot(1496)+foot(1583)+rail(1480,1628),
-    '<ellipse cx="1810" cy="341" rx="46" ry="5" fill="url(#shadow)"/><path d="M1781 340 L1805 '+(balanceY+12)+' Q1810 '+(balanceY+2)+' 1815 '+(balanceY+12)+' L1839 340Z" fill="url(#ash)"/><g id="balance">'+rail(1632,1988)+'<circle cx="1810" cy="'+(balanceY+6)+'" r="4" fill="#ae967a"/></g>'
+    '<ellipse cx="1810" cy="341" rx="46" ry="5" fill="url(#shadow)"/><path d="M1781 340 L1805 '+(balanceY+12)+' Q1810 '+(balanceY+2)+' 1815 '+(balanceY+12)+' L1839 340Z" fill="url(#ash)"/><g id="balance">'+rail(1632,1988)+'<rect x="1985" y="'+(ground(1988)-34)+'" width="8" height="40" rx="4" fill="url(#ash)"/><circle cx="1810" cy="'+(balanceY+6)+'" r="4" fill="#ae967a"/></g>'
 
   ];
+  // Problems 2 to 5 each have a marble in their own colour. It is fed into the run from above at its station and gets
+  // stuck there: the run does not solve the problem for it. (The pictures are 245 × 317 with the glass in the top part.)
+  const mateGlass=['swirl-1-0','swirl-2-2','swirl-3-0','swirl-4-0'];
+  const mateArt=()=>mateGlass.map((_,i)=>'<ellipse id="mateShadow'+i+'" rx="23" ry="4" fill="url(#shadow)"/>').join('')+
+    mateGlass.map((file,i)=>'<g id="mate'+i+'" opacity="0"><image href="assets/'+file+'.webp" x="-19.3" y="-20.1" width="38.8" height="50.2" clip-path="url(#orb)"/></g>').join('');
   function art(){
     const explosion=typeof RunExplosion==='undefined'?require('./explosion.js'):RunExplosion;
     return '<defs><linearGradient id="ash"><stop stop-color="#cdb292"/><stop offset=".4" stop-color="#eddcc5"/><stop offset="1" stop-color="#d3b99a"/></linearGradient><radialGradient id="shadow"><stop stop-color="#77664e" stop-opacity=".27"/><stop offset="1" stop-color="#77664e" stop-opacity="0"/></radialGradient><g id="glass-at-impact"><image href="assets/run-glass.webp" x="-19" y="-19" width="38" height="38"/></g><clipPath id="orb"><circle r="19"/></clipPath></defs>'+
       sections.map((s,i)=>'<g id="part'+i+'">'+s+'</g>').join('')+
-      '<ellipse id="contact" rx="23" ry="4" fill="url(#shadow)"/><g id="traveller"><image href="assets/run-glass.webp" x="-19" y="-19" width="38" height="38" clip-path="url(#orb)"/></g>'+
+      mateArt()+'<ellipse id="contact" rx="23" ry="4" fill="url(#shadow)"/><g id="traveller"><image href="assets/run-glass.webp" x="-19" y="-19" width="38" height="38" clip-path="url(#orb)"/></g>'+
       explosion.art();
   }
   // Integrate travel time along the dipped rail from gravitational potential.
@@ -96,6 +101,59 @@ const MarbleRun = (() => {
     const slope=(ground(x+1)-ground(x-1))/2,n=Math.hypot(1,slope);
     return {x:x+(radius+6)*slope/n,y:ground(x)-(radius+6)/n};
   }
+  const approach=668,waitingX=westBank-radius-5,eastStop=eastBank+radius+5,gateStop=gateX-radius-4,lipStop=1985-radius;
+  // A marble fed in from above: how far over its resting place it still is. It falls, lands, and hops once.
+  function dropIn(t,from,to){
+    const u=clamp((t-from)/(to-from));
+    if(u<.7)return 340*(1-(u/.7)**2);
+    const v=(u-.7)/.3;return 44*v*(1-v);
+  }
+  // Where the marbles of problems 2 to 5 are. Before its own scene a marble is not there yet; afterwards it stays where it got stuck.
+  function mates(step,t,balance){
+    const rest=x=>ground(x)-radius-6,list=[];
+    const put=(m,x)=>list.push({scale:1,air:false,spin:x/radius/rad,x,...m});
+    {
+      // Connection: lands on the far bank and rolls to its edge, facing the marble that came down the run.
+      let x=eastStop,up=0,show=step>6?1:0;
+      if(step===6){x=mix(1003,eastStop,ease(clamp((t-.26)/.14)));up=dropIn(t,.06,.26);show=clamp((t-.06)/.05)}
+      put({y:rest(x)-up,show,air:up>3},x);
+    }
+    {
+      // Thinking: rolls into the gate, is thrown back, tries once more and stays there.
+      let x=gateStop,up=0,show=step>7?1:0;
+      if(step===7){
+        show=clamp(t/.05);up=dropIn(t,0,.2);
+        if(t<.5)x=mix(1040,gateStop,clamp((t-.2)/.3)**1.6);
+        else if(t<.66)x=mix(gateStop,gateStop-26,1-(1-(t-.5)/.16)**2);
+        else x=mix(gateStop-26,gateStop,clamp((t-.66)/.2)**2);
+      }
+      put({y:rest(x)-up,show,air:up>3},x);
+    }
+    {
+      // Work: rolls off the end of its rail, misses the next one and ends up on the floor, out of the run.
+      const edge=1444,land=1470,end=1487,lying=341-radius*1.12;
+      let x=end,y=lying,scale=1.12,air=false,show=step>8?1:0;
+      if(step===8){
+        show=clamp(t/.05);
+        if(t<.52){x=mix(1352,edge,clamp((t-.2)/.32)**1.6);const up=dropIn(t,0,.2);y=rest(x)-up;scale=1;air=up>3}
+        else if(t<.72){const v=(t-.52)/.2;x=mix(edge,land,v);y=mix(rest(edge),lying,v*v);scale=mix(1,1.12,v);air=true}
+        else{const v=(t-.72)/.28,hop=Math.min(1,v/.35);x=mix(land,end,1-(1-v)**2);y=lying-40*hop*(1-hop)}
+      }
+      put({y,show,air,scale},x);
+    }
+    {
+      // Equity: lands on one side of the seesaw and rolls to the low end. All the weight is on one side.
+      let x=lipStop,up=0,show=step>9?1:0;
+      if(step===9){
+        show=clamp(t/.05);up=dropIn(t,0,.18);
+        if(t<.6)x=mix(1850,lipStop,clamp((t-.2)/.4)**1.7);
+        else if(t<.72)x=mix(lipStop,lipStop-13,1-(1-(t-.6)/.12)**2);
+        else x=mix(lipStop-13,lipStop,clamp((t-.72)/.12)**2);
+      }
+      put({y:balanceY+(x-balanceX)*Math.tan(balance*rad)-(radius+6)/Math.cos(balance*rad)-up,show,air:up>3},x);
+    }
+    return list;
+  }
   let plungeRun=null;
   function pose(step,f){
     const t=clamp(f);
@@ -104,57 +162,35 @@ const MarbleRun = (() => {
     const plunging=step===3&&t<fall.start;
     const breakage=step===3?(plunging?0:mix(fall.from,1,(t-fall.start)/(1-fall.start))):step===4?1-t:0;
     let x=550;
-    const segment=step===1?0:step===2?1:step>=5?step-3:-1;
-    if(step===2)x=mix(150,brink,t);
-    else if(segment>=0)x=mix(ends[segment],ends[segment+1],step===9?1-(1-t)**2:t);
-    // The two banks meet before the ball reaches the open span.
-    const bridge=step<6?0:step===6?ease(clamp((t-.22)/.36)):1;
+    if(step===1)x=mix(ends[0],ends[1],t);
+    else if(step===2)x=mix(150,brink,t);
+    // After the break is mended the marble rolls on towards the bridge. The bridge is as far as it gets.
+    else if(step===5)x=mix(550,approach,t);
+    else if(step===6)x=mix(approach,waitingX,1-(1-clamp(t/.19))**2);
+    else if(step>6)x=waitingX;
+    // The two banks reach for each other, strain, and fall back open.
+    let bridge=0;
     if(step===6){
-      const waitingX=westBank-radius-5;
-      if(t<.19)x=mix(710,waitingX,1-(1-t/.19)**2);
-      else if(t<.68)x=waitingX;
-      else x=mix(waitingX,1010,ease((t-.68)/.32));
+      const rise=ease(clamp((t-.4)/.2)),give=ease(clamp((t-.68)/.1));
+      bridge=.62*rise*(1-give)+.014*Math.sin(t*300)*clamp((t-.5)/.1)*(1-give)-.06*Math.sin(Math.PI*clamp((t-.78)/.14));
     }
-    let gate=0;
-    if(step===7){
-      const stop=gateX-radius-4;
-      if(t<.37)x=mix(1010,stop,1-(1-t/.37)**1.5);
-      else if(t<.56)x=stop;
-      else x=mix(stop,1330,((t-.56)/.44)**1.25);
-      gate=-76*ease(clamp((t-.44)/.19))*(1-ease(clamp((t-.83)/.17)));
-    }
-    let balance=0;
-    if(step===9){
-      if(t<.43)x=mix(1630,1900,Math.sin(t/.43*Math.PI/2));
-      else if(t<.72)x=mix(1900,1784,ease((t-.43)/.29));
-      else if(t<.89)x=mix(1784,1817,ease((t-.72)/.17));
-      else x=mix(1817,balanceX,ease((t-.89)/.11));
-      balance=(x-balanceX)*.064*ease(clamp((x-1630)/75));
-    }
+    // The gate only shudders when the marble runs into it, twice, a little less the second time.
+    const gate=step===7?-7*Math.sin(Math.PI*clamp((t-.5)/.12))-2.5*Math.sin(Math.PI*clamp((t-.86)/.08)):0;
+    // The seesaw tips under the one marble and stays down, with a small thud when its end meets the floor.
+    const balance=step===9?10*ease(clamp((t-.13)/.42))-.9*Math.sin(Math.PI*clamp((t-.55)/.1)):0;
     let y=ground(x)-radius-6;
-    if(step===8){
-      const takeoff=1441,landing=1503;
-      if(x>=takeoff && x<landing){
-        const flight=(x-takeoff)/(landing-takeoff);
-        y=ground(takeoff)-radius-6+(x-takeoff)*.055+58*flight*flight;
-      }else if(x>=landing && x<1540){
-        const rebound=(x-landing)/37;
-        y-=7*4*rebound*(1-rebound);
-      }
-    }
-    if(step===9)y=balanceY+(x-balanceX)*Math.tan(balance*rad)-(radius+6)/Math.cos(balance*rad);
     if(step===2)({x,y}=ride(x));
     if(plunging){
       // Gravity sets the pace: slow over the brink, fastest at the bottom, straight into the break.
       plungeRun=plungeRun||timedRail(brink,550+13*fall.from/explosion.onset,45);
       ({x,y}=ride(plungeRun(t/fall.start)));
     }else if(breaking)({x,y}=explosion.ball(breakage,y));
-    const stressReached=(step===3&&breakage>=explosion.impact)||(step===6&&bridge===1)||
-      (step===7&&t>=.37)||(step===8&&x>=1441)||(step===9&&t>=1);
+    const stressReached=(step===3&&breakage>=explosion.impact)||(step===6&&t>=.7)||
+      (step===7&&t>=.5)||(step===8&&t>=.52)||(step===9&&t>=.6);
     // tremor: how hard the run shakes (0 to 1). front: cracks left of this x have appeared.
     const tremor=step===2?ease(clamp((t-.2)/.5)):step===3?1-clamp(t/(fall.start*.5)):0;
     const front=step===2?mix(150,brink,t)+130:step===3?brink+130+2500*t:step===4?mix(660,250,t):-1e4;
-    return {tremor,front,stressReached,x,y,spin:(x-ends[0])/radius/rad,breakage,bridge,gate,balance,airborne:step===8 && x>1441 && x<1503};
+    return {tremor,front,stressReached,x,y,spin:(x-ends[0])/radius/rad,breakage,bridge,gate,balance,airborne:false,mates:mates(step,t,balance)};
   }
   function transforms(p){
     const explosion=typeof RunExplosion==='undefined'?require('./explosion.js'):RunExplosion;
@@ -168,8 +204,14 @@ const MarbleRun = (() => {
       out['part'+i]='translate('+dx.toFixed(2)+' '+dy.toFixed(2)+') '+out['part'+i];
     }
     out.balance='rotate('+p.balance+' '+balanceX+' '+balanceY+')';
+    p.mates.forEach((m,i)=>{
+      out['mate'+i]='translate('+m.x.toFixed(2)+' '+m.y.toFixed(2)+') rotate('+m.spin.toFixed(1)+') scale('+m.scale.toFixed(3)+')';
+      out['mateShadow'+i]='translate('+m.x.toFixed(2)+' '+(m.y+21*m.scale).toFixed(2)+') scale('+(m.air||m.show<1?0:1)+')';
+    });
     return out;
   }
-  return {art,pose,transforms,quake,ground,fall,camera,times,ease,clamp,mix};
+  // How visible each station marble is (0 to 1): they fade in at the top of their fall.
+  const fades=p=>Object.fromEntries(p.mates.map((m,i)=>['mate'+i,m.show]));
+  return {art,pose,transforms,fades,quake,ground,fall,camera,times,ease,clamp,mix};
 })();
 if(typeof module!=='undefined')module.exports=MarbleRun;

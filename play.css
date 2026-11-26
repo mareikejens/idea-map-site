@@ -140,3 +140,25 @@
 @media(max-width:720px){.ask-stage{padding-bottom:24px}.ask-nav{margin-left:calc(7vw - 18px)}}
 /* Short phones: tighter rows, so the five questions and Back fit without scrolling. */
 @media(max-height:720px){.ask-row{min-height:52px;padding-block:6px}.ask-stage{padding-top:14px}}
+
+/* ---------- story: the tap that moves it on, and the question a visitor can answer ---------- */
+.controls .cue{display:none;margin-left:auto;padding:10px 2px;pointer-events:none;animation:cue-breathe 2.2s ease-in-out infinite}
+.ready .controls .cue,.world:has(.flood) .controls .cue{display:block}
+@keyframes cue-breathe{0%,100%{opacity:.45}50%{opacity:1}}
+.answers{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;opacity:0;pointer-events:none;transition:opacity .4s ease .3s}
+.headline:has(.held.shown) .answers{opacity:1;pointer-events:auto}
+.answer-chip{padding:10px 22px;font-size:max(1em,16px);min-height:44px;border:1px solid #2929283d;border-radius:30px;background:#fffdf9;transition:background .15s,border-color .15s}
+.answer-chip:hover{background:#fff;border-color:#292928}
+.start-hint{margin:8px 0 0;font-size:var(--body)}
+.welcome-copy .start-hint+form{margin-top:14px}
+.start-hint:empty{display:none}
+@media(prefers-reduced-motion:reduce){.controls .cue{animation:none}}
+
+/* ---------- the ending: the jar has left, a closing card stands where the ramps are ---------- */
+.finale{position:absolute;z-index:6;left:50%;top:46%;transform:translate(-50%,0);width:min(86%,340px);padding:26px 26px 14px;border-radius:22px;background:#fffdf9;box-shadow:0 18px 40px -22px #4a3b2866,0 0 0 1px #2929280f;text-align:center}
+.finale h2{margin:0 0 8px;font-family:"Crete Round",Georgia,serif;font-weight:400;font-size:25px;letter-spacing:-.02em}
+.finale p{margin:0}
+.finale .primary{display:flex;align-items:center;justify-content:center;margin-top:18px;text-decoration:none}
+.finale .subtle{margin-top:6px;background:none;border:0}
+.play-stage.sent .play-shelves,.play-stage.sent .play-art,.play-stage.sent .play-hint{opacity:.3;pointer-events:none;transition:opacity .5s}
+.play-stage.sent .send-jar,.play-stage.sent .play-back{visibility:hidden}

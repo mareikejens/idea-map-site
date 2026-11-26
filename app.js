@@ -16,7 +16,7 @@ document.querySelector('.mast .face').setAttribute('aria-label',A.open);
 const ideas=groups.flatMap((group,g)=>group.ideas.map((i,index)=>({...i,g,group,shade:index%6})));
 const app=document.querySelector('#app'),sheet=document.querySelector('#sheet'),detail=document.querySelector('#detail');
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
-const state={step:0,name:'',fullName:'',email:'',picked:new Set(),read:new Set(),own:[],area:0,sent:'',paused:false};
+const state={step:0,name:'',fullName:'',email:'',picked:new Set(),read:new Set(),own:[],area:0,sent:'',worried:'',paused:false};
 // A visitor's own marble is an idea like any other, flagged `own`. It lives in the same list so the jar can draw it.
 function addOwnIdea({id,title,note,g}){
   g=Math.max(0,Math.min(groups.length-1,g|0));
@@ -26,14 +26,14 @@ function addOwnIdea({id,title,note,g}){
 try{
   const saved=JSON.parse(sessionStorage.getItem('idea-map-visual')||'{}');
   state.fullName=String(saved.fullName||saved.name||'');state.name=state.fullName.trim().split(/\s+/)[0];
-  state.email=String(saved.email||'');state.sent=String(saved.sent||'');state.area=Math.max(0,Math.min(groups.length-1,saved.area|0));
+  state.email=String(saved.email||'');state.worried=String(saved.worried||'');state.sent=String(saved.sent||'');state.area=Math.max(0,Math.min(groups.length-1,saved.area|0));
   for(const own of (saved.own||[]).slice(0,5))addOwnIdea(own);
   const known=id=>ideas.some(i=>i.id===id);
   state.picked=new Set((saved.ids||[]).filter(known));state.read=new Set((saved.read||[]).filter(known));
 }catch{}
 function save(){
   try{sessionStorage.setItem('idea-map-visual',JSON.stringify({
-    fullName:state.fullName,email:state.email,sent:state.sent,area:state.area,ids:[...state.picked],read:[...state.read],
+    fullName:state.fullName,email:state.email,worried:state.worried,sent:state.sent,area:state.area,ids:[...state.picked],read:[...state.read],
     own:state.own.map(({id,title,note,g})=>({id,title,note,g}))
   }))}catch{}
 }
@@ -47,7 +47,7 @@ const jarTitle=()=>state.name?named(U.personalJar):U.jar;
 // Story controls. "Skip to the ideas" is there for visitors in a hurry.
 function controls(label=U.next,withPause=false){
   const early=state.step>=1&&state.step<10;
-  return '<nav class="controls">'+btn('back',U.back,'subtle')+(early?btn('skip',U.skip,'subtle skip'):'')+(withPause?btn('pause',U.pause,'pause'):'')+btn('next',label,'keyboard-next')+'</nav>';
+  return '<nav class="controls">'+btn('back',U.back,'subtle')+(early?btn('skip',U.skip,'subtle skip'):'')+(withPause?btn('pause',U.pause,'pause'):'')+'<span class="cue" aria-hidden="true">'+esc(matchMedia('(hover:hover)').matches?U.cueClick:U.cueTap)+'</span>'+btn('next',label,'keyboard-next')+'</nav>';
 }
 let raf=0;
 function animate(duration,paint,done){
@@ -81,7 +81,7 @@ function machine(stage,step){
   const entryPose=carried&&from>0?lastPose:null;
   // Breaking and mending are one clock run in two directions: pick it up wherever the other scene left it.
   const f0=!entryPose?0:step===4&&from===3?1-entryPose.breakage:step===3&&from===4?MarbleRun.fall.start+(1-MarbleRun.fall.start)*MarbleRun.clamp((entryPose.breakage-MarbleRun.fall.from)/(1-MarbleRun.fall.from)):0;
-  const duration=Math.max(700,[0,4900,3900,2800,2600,3500,5100,3850,3450,4600][step]*(1-f0));
+  const duration=Math.max(700,[0,4900,3900,2800,2600,3500,5200,4300,4000,4700][step]*(1-f0));
   // A scene left early hands its marble over: for half a second the pose glides from where it was to where it belongs.
   const joinSpan=f0?0:MarbleRun.clamp(520/duration);
   // "I am." and the marble goes: only a breath at the brink while the words change, then it races down the drop.
@@ -112,6 +112,7 @@ function machine(stage,step){
     }
     stage.closest('.stage')?.classList.toggle('stressed',pose.stressReached);
     for(const [id,value] of Object.entries(MarbleRun.transforms(shown)))nodes.get(id).setAttribute('transform',value);
+    for(const [id,value] of Object.entries(MarbleRun.fades(pose)))nodes.get(id).setAttribute('opacity',value);
     const rect=stage.getBoundingClientRect(),mobile=rect.width<700;
     if(!rect.width)return;   // not laid out (hidden tab): there is no camera to aim yet
     // In the collapse scene the camera stays close for the first moment of the plunge, then pulls back as the marble gathers speed.
@@ -173,19 +174,14 @@ function machine(stage,step){
   });
 }
 function welcome(){
-  app.innerHTML='<section class="welcome opening"><div class="illustration"></div><div class="welcome-copy"><button class="face" type="button" data-about aria-label="'+esc(A.open)+'"><img src="assets/mareike.jpg" alt="Mareike Jens"></button><h1>'+esc(W.title)+'<span>'+esc(W.subtitle)+'</span></h1><form id="entry" novalidate><div class="namebox"><input id="visitor" autocomplete="name" aria-label="'+esc(W.label)+'" placeholder="'+esc(W.label)+'"></div></form><p class="visit-notice">'+esc(W.notice||'')+'</p></div><button class="marble-start" form="entry" type="submit" aria-label="'+esc(U.start)+'"></button></section>';
+  app.innerHTML='<section class="welcome opening"><div class="illustration"></div><div class="welcome-copy"><button class="face" type="button" data-about aria-label="'+esc(A.open)+'"><img src="assets/mareike.jpg" alt="Mareike Jens"></button><h1>'+esc(W.title)+'<span>'+esc(W.subtitle)+'</span></h1><p class="start-hint">'+esc(W.hint||'')+'</p><form id="entry" novalidate><div class="namebox"><input id="visitor" autocomplete="name" aria-label="'+esc(W.label)+'" placeholder="'+esc(W.label)+'"></div></form><p class="visit-notice">'+esc(W.notice||'')+'</p></div><button class="marble-start" form="entry" type="submit" aria-label="'+esc(U.start)+'"></button></section>';
   machine(app.querySelector('.illustration'),0);
   const input=document.querySelector('#visitor');input.value=state.fullName;
   app.querySelector('form').onsubmit=e=>{
     e.preventDefault();const full=input.value.trim().replace(/\s+/g,' '),parts=full.split(' ');
-    // The marble only starts once there is a name: nudge the field instead of rolling.
-    if(!full){
-      input.focus();
-      if(!reduced.matches)input.parentElement.animate([{translate:'0'},{translate:'-7px'},{translate:'6px'},{translate:'-3px'},{translate:'0'}],{duration:360,easing:'ease-out'});
-      return;
-    }
+    // The name is optional: without one the story simply speaks to "you" and the jar is "Your jar".
     const from=app.querySelector('.welcome-copy .face img').getBoundingClientRect();
-    state.fullName=full;state.name=parts[0];openerStart=coverX;save();Track.send('start');go(1,()=>dockPortrait(from));
+    state.fullName=full;state.name=full?parts[0]:'';openerStart=coverX;save();Track.send('start');go(1,()=>dockPortrait(from));
   };
 }
 // The cover portrait travels up into the header corner while shrinking; the header fades in around it.
@@ -226,8 +222,9 @@ function story(){
   const kind=group?'station':s<=2?'opening':'';
   // The first danger is posed as a question: "I am." stands alone while the marble races down the drop, "What if…" then takes its place, and the answer appears as the marble bursts.
   // "I am." answers the question from the scene before, then the first danger follows.
-  const lead=s===3?'<span class="iam">'+esc(S.iAm)+'</span><span class="whatif">'+esc(S.whatIf)+'</span> ':'';
-  const head='<h1 tabindex="-1" class="'+(s===2?'worry':'')+'">'+lead+(lead?'<span class="answer">'+title+'</span>':title)+'</h1>'+(body?'<p>'+lateWords(body)+'</p>':'');
+  const lead=s===3?'<span class="iam">'+esc(state.worried==='yes'?S.iAmToo:S.iAm)+'</span><span class="whatif">'+esc(S.whatIf)+'</span> ':'';
+  const head='<h1 tabindex="-1" class="'+(s===2?'worry':'')+'">'+lead+(lead?'<span class="answer">'+title+'</span>':title)+'</h1>'+(body?'<p>'+lateWords(body)+'</p>':'')+
+    (s===2?'<div class="answers">'+S.worriedAnswers.map(([key,label])=>'<button class="answer-chip" data-action="worry" data-answer="'+esc(key)+'">'+esc(label)+'</button>').join('')+'</div>':'');
   let section=app.querySelector('.stage.machine');
   if(!section){
     app.innerHTML='<section class="stage machine '+kind+'"><div class="headline">'+head+'</div><div class="illustration"></div>'+controls(U.next,true)+'</section>';
@@ -272,7 +269,7 @@ function fillMarbleField(){
   const pool=visible.length>=shown.length?visible:slots.map((_,i)=>i);
   shown.forEach((idea,i)=>Object.assign(slots[pool[Math.floor((i+.5)*pool.length/shown.length)]],{idea,g:idea.g,shade:idea.shade}));
   // The field spreads out from the marble that rolled in from the run.
-  const first=slots.find(m=>m.idea&&m.idea.id==='thinking-1')||{x:W/2,y:H/2};
+  const first=slots.find(m=>m.idea&&m.idea.id==='equity-1')||{x:W/2,y:H/2};
   const reach=Math.hypot(Math.max(first.x,W-first.x),Math.max(first.y,H-first.y));
   for(const m of slots)m.arrive=Math.hypot(m.x-first.x,m.y-first.y)/reach*650;
 
@@ -317,7 +314,7 @@ function flood(origin){
   cancelAnimationFrame(raf);
   if(reduced.matches){stage.classList.add('settled','asked');world.classList.add('ready')}
   if(origin&&!reduced.matches){
-    const seed=app.querySelector('[data-seed="thinking-1"]');
+    const seed=app.querySelector('[data-seed="equity-1"]');
     const img=seed?.querySelector('img'),dest=seed?.getBoundingClientRect();
     if(img&&dest)img.animate([
       {transformOrigin:'top left',transform:'translate('+(origin.left-dest.left)+'px,'+(origin.top-dest.top)+'px) scale('+origin.width/dest.width+')'},
@@ -369,7 +366,7 @@ function handover(swap){
 let booted=false;
 function go(n,after){
   const from=state.step;
-  const source=from===9&&n===10?app.querySelector('#traveller image'):null;
+  const source=from===9&&n===10?app.querySelector('#mate3 image'):null;
   const handoff=source?source.getBoundingClientRect():null;
   if(n===11)n=from===12?10:12;                 // step 11 (the plain list) is retired: the flood leads straight into the game
   n=Math.max(0,Math.min(12,n));
@@ -427,6 +424,8 @@ app.onclick=e=>{
   switch(b.dataset.action){
     case'next':go(state.step+1);break;
     case'back':go(state.step-1);break;
+    // An answer to "Are you worried?" is remembered (it travels with the jar) and moves the story on.
+    case'worry':state.worried=b.dataset.answer;save();Track.send('worried',{answer:state.worried});go(3);break;
     case'restart':go(0);break;
     case'skip':
       // Two scenes hold back a second line until the next tap. Mark them as shown so the jump goes straight through.
