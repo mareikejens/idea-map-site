@@ -69,6 +69,9 @@ let lastCamera=null,lastPose=null,lastScene=0,coverX=-300,openerStart=-115,rig=n
 // worry = {x: place on the rail, v: speed, dragging, anchor: where the camera stays, level: 0 calm … 1 at the edge}.
 let worry=null,rolledIn=false,dragged=false,nudgedAt=0,askedAt=0;   // askedAt: when the question appeared (0 = not yet)
 let goPass=false;  // set just before go() by keyboard, Continue and Skip: they may leave "Are you worried?" without an answer
+// Where in the collapse scene (f, 0 to 1) the run shatters, and where "What if…" takes over: .32 earlier.
+const burstAt=MarbleRun.fall.start+(1-MarbleRun.fall.start)*(MarbleRun.impact()-MarbleRun.fall.from)/(1-MarbleRun.fall.from),whatIfAt=burstAt-.32;
+const worryShake=.65;  // strength of the worry shaking, on the run and the camera (1 felt too strong in testing)
 let worryFelt=0;   // how hard the run was shaking when the marble went over the edge (carried into the next scene)
 const worryBack=150;   // how far back from the brink the marble can be pulled, in drawing units
 const worryLevel=x=>MarbleRun.clamp((x-(MarbleRun.brink-worryBack))/worryBack);
@@ -138,7 +141,7 @@ function machine(stage,step){
       // The answer is felt while it is given: towards the edge the run shakes hard and cracks spread ahead of the marble,
       // back up the slope it calms down and the cracks close again. (`front`: cracks left of this x are drawn.)
       felt=worryLevel(worry.x);
-      pose={...pose,x:at.x,y:at.y,spin:(worry.x+115)*180/(19*Math.PI),tremor:.2+2.6*felt**1.4,front:MarbleRun.mix(170,MarbleRun.brink+130,felt)};
+      pose={...pose,x:at.x,y:at.y,spin:(worry.x+115)*180/(19*Math.PI),tremor:.2+2.6*worryShake*felt**1.4,front:MarbleRun.mix(170,MarbleRun.brink+130,felt)};
     }
     else if(step===2&&askedAt&&!reduced.matches){
       // Nobody is told to drag. The marble rocks on the spot instead, like something that wants to be picked up.
@@ -153,7 +156,7 @@ function machine(stage,step){
     else if(carriedWorry&&pose.breakage<MarbleRun.impact()+.07){
       // Still the visitor's worry: same shaking and red as on the scene before, easing out quickly once the run shatters.
       felt=carriedWorry*(1-MarbleRun.clamp((pose.breakage-MarbleRun.impact())/.07));
-      pose={...pose,tremor:Math.max(pose.tremor||0,(.2+2.6*felt**1.4)*(felt>0))};
+      pose={...pose,tremor:Math.max(pose.tremor||0,(.2+2.6*worryShake*felt**1.4)*(felt>0))};
     }
     lastPose=pose;
     // Worry: the run shivers under the marble (which rides along with its section) and cracks draw themselves in ahead of it.
@@ -217,7 +220,7 @@ function machine(stage,step){
     }
     lastCamera=[cx,cy,width];
     // The picture itself jolts with the worry. Only the picture: lastCamera stays steady, or the marble would jitter under the finger.
-    if(felt&&!reduced.matches){const now=performance.now()/1000,k=width*felt*felt;cx+=.006*k*Math.sin(now*47);cy+=.009*k*Math.sin(now*61+1)}
+    if(felt&&!reduced.matches){const now=performance.now()/1000,k=worryShake*width*felt*felt;cx+=.006*k*Math.sin(now*47);cy+=.009*k*Math.sin(now*61+1)}
     svg.setAttribute('viewBox',[cx-width/2,cy-height/2,width,height].join(' '));
   }
   if(step===0){
@@ -237,6 +240,9 @@ function machine(stage,step){
     // Scene 1 carries its own pace (MarbleRun.surge), so it runs on plain time: "Fast." and the push share one frame.
     const u=Math.max(0,(raw-lead)/(1-lead)),f=step===1?u:f0+(1-f0)*settle(u);
     if(step===1&&f>=MarbleRun.fastAt)section.querySelector('.late')?.classList.add('now');
+    // "So am I." gives way to "What if…" a set stretch of the run before the burst, so the question is fully there
+    // while the marble races at the break, and the burst answers it (style.css: .whatif-now).
+    section.classList.toggle('whatif-now',step===3&&f>=whatIfAt);
     paint(f,u);
   },()=>{
     section.classList.add('ready');

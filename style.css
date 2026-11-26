@@ -111,12 +111,14 @@ dialog{background:var(--studio);border:1px solid #e2d8c8;box-shadow:0 20px 80px 
 /* Between scenes the words fade out before the next line fades in (ink-in restarts when .leaving comes off). */
 .headline.leaving{animation:none;opacity:0;translate:0 -4px;transition:opacity .2s ease,translate .2s ease}
 @media(prefers-reduced-motion:no-preference){
-  /* "I am." has the screen to itself, at full headline size, while the marble races down. It then gives
-     its place to "What if…" (it lies over that line, so nothing jumps), just before the burst. */
+  /* "I am." has the screen to itself, at full headline size, while the marble starts down the drop. Partway down it
+     gives its place to "What if…" (it lies over that line, so nothing jumps), which builds while the marble races to
+     the break. The swap follows the marble, not a clock: app.js sets .whatif-now from the scene's progress. */
   .headline h1:has(.iam){position:relative}
-  .iam{position:absolute;inset:0 0 auto;animation:iam-out .25s 1.45s both}
-  @keyframes iam-out{to{opacity:0}}
-  .iam+.whatif{animation:late-in .35s 1.75s both}
+  .iam{position:absolute;inset:0 0 auto;transition:opacity .25s ease}
+  .whatif-now .iam{opacity:0}
+  .iam+.whatif{opacity:0;transition:opacity .35s ease .12s}
+  .whatif-now .iam+.whatif{opacity:1}
   /* A [bracketed] word in the body line lands a beat after the sentence, like a spoken pause. */
   /* "Fast." lands with a punch on the frame the marble is pushed (see surge in motion.js), not a soft fade. */
   .headline .late{display:inline-block;opacity:0}.headline .late.now{opacity:1;animation:fast-in .32s cubic-bezier(.2,1.7,.45,1) both}
@@ -145,8 +147,8 @@ dialog{background:var(--studio);border:1px solid #e2d8c8;box-shadow:0 20px 80px 
 .headline:has(.iam) .answer{display:block;margin-top:.12em}
 .answer,.headline:has(.whatif) p{opacity:0;transition:opacity .4s ease}
 .stressed .answer,.stressed .headline:has(.whatif) p{opacity:1}
-/* Tension: after the burst the screen holds on "What if…" for a moment before the answer lands, and the question follows it. */
-.stressed .answer{transition-delay:.55s}.stressed .headline:has(.whatif) p{transition-delay:.55s}
+/* The burst answers "What if…": the danger lands right after it, while the pieces still fly. */
+.stressed .answer{transition-delay:.18s}.stressed .headline:has(.whatif) p{transition-delay:.18s}
 
 /* ---- Marble page ----
    Marbles are cut to clean circles with a soft shadow and arrive spreading out from the first one. After about a second they part
