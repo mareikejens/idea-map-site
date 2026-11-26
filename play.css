@@ -227,3 +227,14 @@ dialog:has(.own-form){overflow:hidden;max-height:none;padding:18px 20px 18px}
 .play .pick-name{-webkit-line-clamp:2;min-height:calc(2em*1.18)}
 /* No count bubble under the jar: the marbles in it show it, and screen readers hear the count (aria-label on the jar). */
 .play .jar-count{display:none}
+/* First visit only: how to learn that a marble opens its idea (play.js, tapCue). The line sits just under the shelves
+   without moving anything; the ring pulses around the first marble. Both go once the first idea has been read. */
+.play-shelves .tap-hint{position:absolute;left:0;right:0;top:100%;margin:6px 0 0;text-align:center;font-size:14px;color:var(--ink);opacity:0;animation:tap-in .6s ease 1.8s forwards;pointer-events:none}
+@keyframes tap-in{to{opacity:.72}}
+.play .pick.tap-cue .ball{animation:tap-ring 1.9s ease-out 2s infinite}
+@keyframes tap-ring{0%{box-shadow:1px 4px 5px -3px #70553c73,0 0 0 0 color-mix(in srgb,var(--tint) 60%,transparent)}75%,100%{box-shadow:1px 4px 5px -3px #70553c73,0 0 0 13px color-mix(in srgb,var(--tint) 0%,transparent)}}
+@media(prefers-reduced-motion:reduce){.play .pick.tap-cue .ball{animation:none;box-shadow:1px 4px 5px -3px #70553c73,0 0 0 3px color-mix(in srgb,var(--tint) 45%,transparent)}.play-shelves .tap-hint{animation:none;opacity:.72}}
+/* The closing screen shows the visitor's own jar, sealed, where Mareike's portrait used to be (finale in play.js). */
+.finale-jar{margin-bottom:22px;filter:drop-shadow(0 3px 10px #6e553722)}
+.finale-jar .bottle{width:132px;height:172.5px}.finale-jar .bottle-scale{transform:scale(.88)}
+.finale-jar .cork{opacity:1;translate:0 0}.finale-jar .jar-bow{opacity:1;scale:1}

@@ -74,15 +74,19 @@ const Play=(()=>{
     for(let k=0;k<shelves;k++){const n=base+(k<extra?1:0);html+='<div class="rail" style="--slots:'+n+';--cols:'+cols+'">'+items.slice(at,at+n).join('')+'</div>';at+=n}
     return html;
   }
+  // How a first-time visitor learns that a marble opens its idea (owner is testing both): ?tap=line, ?tap=ring, default both.
+  // Both disappear once the first idea has been read.
+  const tapParam=new URLSearchParams(location.search).get('tap')||'both',tapCue={line:tapParam!=='ring',ring:tapParam!=='line'};
   function renderArea(){
     const g=groups[state.area],list=ideas.filter(i=>i.g===state.area&&!i.own);
     stage.querySelector('.play-head h1').textContent=g.title;
     // The dots sit at the top of the shelves block, between the title and the top shelf.
     stage.querySelector('.play-shelves').innerHTML=
-      '<nav class="problem-dots">'+groups.map((p,k)=>'<button class="dot" data-area="'+k+'" style="--tint:'+p.tint+'"></button>').join('')+'</nav>'+shelfRows(list);
+      '<nav class="problem-dots">'+groups.map((p,k)=>'<button class="dot" data-area="'+k+'" style="--tint:'+p.tint+'"></button>').join('')+'</nav>'+shelfRows(list)+(tapCue.line&&!state.read.size?'<p class="tap-hint">'+esc(U.tapHint)+'</p>':'');
     for(const dot of stage.querySelectorAll('.problem-dots .dot'))dot.onclick=()=>setArea(+dot.dataset.area);
     stage.style.setProperty('--tint',g.tint);
     for(const b of stage.querySelectorAll('.pick:not(.add-own)'))bindPick(b);
+    if(tapCue.ring&&!state.read.size)stage.querySelector('.pick:not(.add-own)')?.classList.add('tap-cue');
     stage.querySelector('.add-own').onclick=()=>{Sound.wake();openOwn()};
     seenAreas.add(state.area);
     // The shelves go on to both sides: a marble of the neighbouring problem looks in from each edge of the screen.
@@ -337,6 +341,7 @@ const Play=(()=>{
   function closeCard(){if(!reading_card)return;Track.send('read',{idea:reading_card.id,title:reading_card.title,ms:Math.round(performance.now()-reading_card.since)});reading_card=null}
   function openIdea(idea){
     state.read.add(idea.id);save();refresh();
+    if(stage){stage.querySelector('.tap-hint')?.remove();for(const c of stage.querySelectorAll('.tap-cue'))c.classList.remove('tap-cue')}
     closeCard();reading_card={id:idea.id,title:idea.title,since:performance.now()};Track.send('open',{idea:idea.id,title:idea.title});
     const inJar=state.picked.has(idea.id);
     const body=idea.own?(idea.note?'<p class="own-note">'+esc(idea.note)+'</p>':''):cardSections(idea);
@@ -470,7 +475,8 @@ const Play=(()=>{
   }
 
   // ---------- the ending ----------
-  // The jar is corked and lifted off the page. Then the closing screen: Mareike's portrait and a goodbye by name.
+  // The jar is corked and lifted off the page. Then the closing screen: the visitor's sealed jar (a copy, with its marbles,
+  // cork and bow) and a goodbye by name.
   // "Keep exploring" brings the game back.
   let leaving=null;
   function finale(text,unsent){
@@ -479,19 +485,20 @@ const Play=(()=>{
     endFinale(true);
     const jar=stage.querySelector('.play-jar'),booking=window.IDEA_MAP.send?.bookingUrl;
     const card=document.createElement('div');card.className='finale';card.setAttribute('role','status');
-    card.innerHTML='<img class="meet-host" src="assets/mareike.jpg" alt="'+esc(A.name)+'">'+
+    card.innerHTML='<div class="finale-jar" aria-hidden="true"></div>'+
       '<h2>'+esc(unsent?U.finaleReady:state.name?named(U.finaleTitle):U.finaleTitleGuest)+'</h2><p>'+esc(text)+'</p>'+
       (booking?'<a class="primary" href="'+esc(booking)+'" target="_blank" rel="noopener">'+esc(U.finaleCoffee)+'</a>':'')+
       '<button class="subtle" type="button">'+esc(U.finaleStay)+'</button>';
+    card.querySelector('.finale-jar').append(jar.querySelector('.bottle').cloneNode(true));
     stage.append(card);stage.classList.add('sent');jar.classList.add('sealed');
     card.querySelector('button').onclick=()=>endFinale();
     if(reduced.matches)return;
     const soft='cubic-bezier(.2,.8,.2,1)';
     // 1. cork in, then the gift bow tied on (the "sealed" and "sent" styles), 2. the jar dips as if picked up and leaves through the top, 3. the page clears,
-    // 4. Mareike is there, 5. the words.
+    // 4. the sealed jar is there, 5. the words.
     leaving=jar.animate([{transform:'none'},{transform:'translateY(9px)',offset:.2,easing:'cubic-bezier(.55,0,.9,.45)'},{transform:'translateY(-125vh) rotate(7deg)'}],{duration:1300,delay:1150,fill:'forwards'});
     card.animate([{opacity:0},{opacity:1}],{duration:450,delay:1800,fill:'backwards'});
-    card.querySelector('.meet-host').animate([{opacity:0,transform:'scale(.82)'},{opacity:1,transform:'none'}],{duration:620,delay:2100,easing:soft,fill:'backwards'});
+    card.querySelector('.finale-jar').animate([{opacity:0,transform:'scale(.82)'},{opacity:1,transform:'none'}],{duration:620,delay:2100,easing:soft,fill:'backwards'});
     for(const [n,el] of [...card.querySelectorAll('h2,p,.primary,.subtle')].entries())
       el.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:480,delay:2600+n*110,easing:'ease-out',fill:'backwards'});
   }
@@ -511,11 +518,10 @@ const Play=(()=>{
   try{asked=sessionStorage.getItem('idea-map-asked')==='yes'}catch{}
   function ask(){
     const row=(k,title,sub,marble)=>'<button class="ask-row" data-ask="'+k+'">'+marble+'<span class="ask-text"><b>'+esc(title)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</span><i aria-hidden="true">›</i></button>';
-    app.innerHTML='<section class="world play ask"><div class="ask-stage"><h1 tabindex="-1">'+esc(state.name?named(U.askTitleNamed):U.askTitle)+'</h1>'+
+    app.innerHTML='<section class="world play ask"><div class="ask-stage"><h1 tabindex="-1">'+esc(state.name?named(U.askTitleNamed):U.askTitle).replace(/\n/g,'<br>')+'</h1>'+
       // The one written hint on the site, by choice: tapping a row looks like a single answer, but the jar takes as many as you like.
       (U.askBody?'<p class="ask-sub">'+esc(U.askBody)+'</p>':'')+
-      '<div class="ask-list">'+groups.map((g,k)=>row(k,g.title,'',ball({g:k,shade:0}))).join('')+
-      row('own',U.askOther,U.askOtherHint,'<span class="ball own" aria-hidden="true"></span>')+'</div>'+
+      '<div class="ask-list">'+groups.map((g,k)=>row(k,g.title,'',ball({g:k,shade:0}))).join('')+'</div>'+   // no "Something else" row: own ideas are added from the shelves
       '<nav class="ask-nav"><button class="subtle" data-action="back">'+esc(U.back)+'</button></nav></div></section>';   // app.js handles data-action="back"
     for(const b of app.querySelectorAll('.ask-row'))b.onclick=()=>{
       const own=b.dataset.ask==='own';
@@ -533,7 +539,7 @@ const Play=(()=>{
     if(!asked)return ask();
     app.innerHTML='<section class="world play"><div class="play-stage">'+
       // One way to move between the five problems: they lie side by side. A marble of the next one looks in at each
-      // edge (tap it, swipe, or ← →), and five dots in the problem colours under the shelves, with a faint ‹ › either
+      // edge (tap it, swipe, or ← →), and a dot per problem in the problem colours under the shelves, with a faint ‹ › either
       // side, say where you are. No counter, no tab row, no written hint (see renderArea and the end of mount).
       '<header class="play-head"><p class="area-ask">'+esc(U.areaAsk)+'</p><div class="area-title"><button class="area-step" data-step="-1" aria-label="'+esc(U.areaPrev)+'">‹</button>'+
       '<h1 tabindex="-1"></h1><button class="area-step" data-step="1" aria-label="'+esc(U.areaNext)+'">›</button></div></header>'+
@@ -581,7 +587,7 @@ const Play=(()=>{
   let cardShown=false;
   function unmount(){
     leaving?.cancel();leaving=null;
-    if(state.step!==12){asked=false;try{sessionStorage.removeItem('idea-map-asked');sessionStorage.removeItem('idea-map-reached')}catch{}}   // leaving for the story: ask again next time
+    if(state.step!==13){asked=false;try{sessionStorage.removeItem('idea-map-asked');sessionStorage.removeItem('idea-map-reached')}catch{}}   // leaving for the story: ask again next time
     if(!stage)return;
     cancelAnimationFrame(frame);frame=0;clearTimeout(hintTimer);loose.clear();stage=null;engine=null;
     document.removeEventListener('keydown',areaKeys);
