@@ -30,9 +30,10 @@ const MarbleRun = (() => {
     return x<=kickEnd?lip(x):lip(kickEnd)+(x-kickEnd)*(lip(kickEnd)-lip(kickEnd-1));
   };
   const ground = x => x<=kickTop?base(x):x<kickEnd+3?kicker(x):base(Math.max(kickTop,x-rampSpan));
+  // Step 6 ("Because:") has no station: the camera and the marble stay where scene 5 left them.
   const camera = {1:[45,143,680],2:[348,155,720],3:[730,248,1120],4:[730,248,1120],
-    5:[650,222,740],6:[950,228,700],7:[1280,215,492],8:[1582,250,680],9:[1900,267,535],10:[2183,305,680]};
-  const times = {1:2500,2:2200,3:1450,4:1500,5:1500,6:3600,7:4400,8:2800,9:2200,10:3800};
+    5:[650,222,740],6:[650,222,740],7:[950,228,700],8:[1280,215,492],9:[1582,250,680],10:[1900,267,535],11:[2183,305,680]};
+  const times = {1:2500,2:2200,3:1450,4:1500,5:1500,6:1500,7:3600,8:4400,9:2800,10:2200,11:3800};
   function railPath(a,b,ground){
     const points=[];
     for(let x=a;x<b;x+=4)points.push([x,ground(x)]);
@@ -84,10 +85,11 @@ const MarbleRun = (() => {
     '<ellipse cx="2230" cy="341" rx="46" ry="5" fill="url(#shadow)"/><path d="M2201 340 L2225 '+(balanceY+12)+' Q2230 '+(balanceY+2)+' 2235 '+(balanceY+12)+' L2259 340Z" fill="url(#ash)"/><g id="balance">'+rail(2052,2408)+'<rect x="2405" y="'+(ground(2408)-34)+'" width="8" height="40" rx="4" fill="url(#ash)"/><circle cx="2230" cy="'+(balanceY+6)+'" r="4" fill="#ae967a"/></g>'
 
   ];
-  // There is one blue marble in the story and only ever one in the picture. It cannot cross the open bridge, so at each
-  // station after it (3 to 5) the same blue marble is fed into the run from above, and gets stuck there: the run does not
-  // solve the problem for it. These are its three stand-ins. Each is only visible during its own scene.
-  const mateCount=3;
+  // There is one blue marble in the story and only ever one in the picture. At misuse it is thrown off the run for good, so
+  // at the bridge a fresh one is fed in from above (mate3), and at each station after that (thinking, work, equity) the same
+  // blue marble is fed in again and gets stuck there: the run does not solve the problem for it. These are its four
+  // stand-ins. Each is only visible during its own scene.
+  const mateCount=4;
   const mateArt=()=>Array.from({length:mateCount},(_,i)=>'<ellipse id="mateShadow'+i+'" rx="23" ry="4" fill="url(#shadow)"/>').join('')+
     Array.from({length:mateCount},(_,i)=>'<g id="mate'+i+'" style="opacity:0"><image href="assets/run-glass.webp" x="-19" y="-19" width="38" height="38" clip-path="url(#orb)"/></g>').join('');
   function art(){
@@ -132,7 +134,7 @@ const MarbleRun = (() => {
     if(t<equityDown+.1)return mix(lipStop,lipStop-13,1-(1-(t-equityDown)/.1)**2);
     return mix(lipStop-13,lipStop,clamp((t-equityDown-.1)/.12)**2);
   }
-  // Where the stand-ins of stations 3 to 5 are. Outside its own scene a stand-in is not shown (app.js fades it), so the
+  // Where the stand-ins are (steps 8 to 11). Outside its own scene a stand-in is not shown (app.js fades it), so the
   // marble is always in exactly one place.
   function mates(step,t,balance){
     const rest=x=>ground(x)-radius-6,list=[];
@@ -140,7 +142,7 @@ const MarbleRun = (() => {
     {
       // Thinking: appears on the far side of the bridge, rolls into the gate, is thrown back, tries once more and stays there.
       let x=gateStop,up=0,show=0;
-      if(step===8){
+      if(step===9){
         show=clamp(t/.05);up=dropIn(t,0,.2);
         if(t<.5)x=mix(1460,gateStop,clamp((t-.2)/.3)**1.6);
         else if(t<.66)x=mix(gateStop,gateStop-26,1-(1-(t-.5)/.16)**2);
@@ -152,7 +154,7 @@ const MarbleRun = (() => {
       // Work: rolls off the end of its rail, misses the next one and ends up on the floor, out of the run.
       const edge=1864,land=1890,end=1907,lying=341-radius*1.12;
       let x=end,y=lying,scale=1.12,air=false,show=0;
-      if(step===9){
+      if(step===10){
         show=clamp(t/.05);
         if(t<.52){x=mix(1772,edge,clamp((t-.2)/.32)**1.6);const up=dropIn(t,0,.2);y=rest(x)-up;scale=1;air=up>3}
         else if(t<.72){const v=(t-.52)/.2;x=mix(edge,land,v);y=mix(rest(edge),lying,v*v);scale=mix(1,1.12,v);air=true}
@@ -164,8 +166,15 @@ const MarbleRun = (() => {
       // Equity: lands on the seesaw, rolls left a little past the middle so it nearly balances, then turns back,
       // rolls down to the right end and stays there. The seesaw follows it (see equityX and balance in pose).
       let x=lipStop,up=0,show=0;
-      if(step===10){show=clamp(t/.05);up=dropIn(t,0,.18);x=equityX(t)}
+      if(step===11){show=clamp(t/.05);up=dropIn(t,0,.18);x=equityX(t)}
       put({y:balanceY+(x-balanceX)*Math.tan(balance*rad)-(radius+6)/Math.cos(balance*rad)-up,show,air:up>3},x);
+    }
+    {
+      // Connection: the marble of the run is gone, so a fresh one drops onto the rail behind the bridge, hops,
+      // and rolls up to the open bridge, where the old one used to wait.
+      let x=waitingX,up=0,show=0;
+      if(step===8){show=clamp(t/.05);up=dropIn(t,0,.17);x=mix(dropX,waitingX,1-(1-clamp((t-.17)/.15))**2)}
+      put({y:rest(x)-up,show,air:up>3},x);
     }
     return list;
   }
@@ -174,7 +183,8 @@ const MarbleRun = (() => {
   // The pace, as speed over time: a steady amble (it was already rolling on the cover), then at fastAt a short, visible
   // push up to top speed (kick), a fast run, and a brief brake at the very end. app.js runs this scene on plain time
   // (no settle), so the push lands on the same frame as the word.
-  const fastAt=.4,amble=.1,kick=.08,brake=.14;
+  // (fastAt .52 of 4.8s: "Fast." lands about 2.5s in, so there is time to see the marble rolling before it does.)
+  const fastAt=.52,amble=.15,kick=.064,brake=.11;
   const slow=amble/fastAt,top=(1-amble-kick*slow/2)/(kick/2+(1-fastAt-kick-brake)+brake/2);
   const surge=t=>{
     if(t<=fastAt)return slow*t;
@@ -187,18 +197,18 @@ const MarbleRun = (() => {
   };
   let plungeRun=null,rampRun=null;
   // Misuse, the marble over the scene: it rolls off the mended rail onto the ramp, races down it ever faster, is thrown
-  // up by the lip (launchAt), flies over the gap in one arc, comes down hard on the next rail (landAt), hops and rolls out.
-  const launchAt=.48,landAt=.72,landX=1104,landRest=1128;
+  // up by the lip (launchAt) and shoots off to the top right, out of the picture for good (gone by exitAt). It does not
+  // come back: the bridge scene gets a fresh marble (mate3, dropped in at dropX).
+  const launchAt=.48,exitAt=.8,dropX=1128;
+  function exitPath(v){
+    // One curve from the lip: it leaves along the lip (almost straight up), then bends away to the right, speeding up.
+    const p0=ride(kickEnd),k=ground(kickEnd)-ground(kickEnd-1),n=Math.hypot(1,k),w=v**1.35;
+    const p1={x:p0.x+300/n,y:p0.y+300*k/n},p2={x:p0.x+1200,y:p0.y-1600};
+    return {x:(1-w)**2*p0.x+2*(1-w)*w*p1.x+w*w*p2.x,y:(1-w)**2*p0.y+2*(1-w)*w*p1.y+w*w*p2.y};
+  }
   function rampRide(t){
-    const lip=ride(kickEnd),rest=x=>ground(x)-radius-6;
     if(t<launchAt){rampRun=rampRun||timedRail(approach,kickEnd,90);return {...ride(rampRun(t/launchAt)),airborne:false}}
-    if(t<landAt){
-      // One thrown arc from the lip to the rail: it leaves a little steeper than the lip's own slope and peaks well above the track.
-      const v=(t-launchAt)/(landAt-launchAt),far=landX-lip.x,rise=lip.y-rest(landX),k=1.2*(ground(kickEnd-1)-ground(kickEnd+1))/2;
-      return {x:lip.x+far*v,y:lip.y-(k*far*v-(k*far-rise)*v*v),airborne:true};
-    }
-    const w=clamp((t-landAt)/.2),hop=clamp((t-landAt)/.11),x=mix(landX,landRest,1-(1-w)**2);
-    return {x,y:rest(x)-26*4*hop*(1-hop),airborne:hop<1};
+    return {...exitPath(clamp((t-launchAt)/(exitAt-launchAt))),airborne:true};
   }
   function pose(step,f){
     const t=clamp(f);
@@ -211,38 +221,41 @@ const MarbleRun = (() => {
     else if(step===2)x=mix(150,brink,t);
     // After the break is mended the marble rolls on towards the bridge. The bridge is as far as it gets.
     else if(step===5)x=mix(550,approach,t);
-    else if(step===7)x=mix(landRest,waitingX,1-(1-clamp(t/.19))**2);
-    else if(step>7)x=waitingX;
+    else if(step===6)x=approach;
     // The two banks reach for each other, strain, and fall back open.
     let bridge=0;
-    if(step===7){
-      const rise=ease(clamp((t-.28)/.24)),give=ease(clamp((t-.64)/.12));
-      bridge=.62*rise*(1-give)+.014*Math.sin(t*250)*clamp((t-.42)/.1)*(1-give)-.06*Math.sin(Math.PI*clamp((t-.76)/.16));
+    // (A little later than the drop-in of the fresh marble, which reaches the bridge at .32.)
+    if(step===8){
+      const rise=ease(clamp((t-.32)/.24)),give=ease(clamp((t-.68)/.12));
+      bridge=.62*rise*(1-give)+.014*Math.sin(t*250)*clamp((t-.46)/.1)*(1-give)-.06*Math.sin(Math.PI*clamp((t-.8)/.16));
     }
     // The gate only shudders when the marble runs into it, twice, a little less the second time.
-    const gate=step===8?-7*Math.sin(Math.PI*clamp((t-.5)/.12))-2.5*Math.sin(Math.PI*clamp((t-.86)/.08)):0;
+    const gate=step===9?-7*Math.sin(Math.PI*clamp((t-.5)/.12))-2.5*Math.sin(Math.PI*clamp((t-.86)/.08)):0;
     // The seesaw follows the one marble: level until it lands, dips a little to the left while the marble is past the
     // middle, then tips right as it rolls down and stays down (10°), with a small thud when its end meets the floor.
     let balance=0;
-    if(step===10){
+    if(step===11){
       const off=equityX(t)-balanceX,landed=ease(clamp((t-.16)/.1));
       balance=landed*(off<0?1.8*off/(balanceX-2052)*10:Math.min(10,10*off/(lipStop-balanceX)))-.9*Math.sin(Math.PI*clamp((t-equityDown)/.1));
     }
     let y=ground(x)-radius-6;
     if(step===2)({x,y}=ride(x));
     let airborne=false;
-    if(step===6)({x,y,airborne}=rampRide(t));
+    if(step===7)({x,y,airborne}=rampRide(t));
+    // From the bridge on, the marble of the run is gone: it stays where it left the picture (and is not shown).
+    else if(step>7)({x,y,airborne}={...exitPath(1),airborne:true});
     if(plunging){
       // Gravity sets the pace: slow over the brink, fastest at the bottom, straight into the break.
       plungeRun=plungeRun||timedRail(brink,550+13*fall.from/explosion.onset,45);
       ({x,y}=ride(plungeRun(t/fall.start)));
     }else if(breaking)({x,y}=explosion.ball(breakage,y));
-    const stressReached=(step===3&&breakage>=explosion.impact)||(step===6&&t>=launchAt)||(step===7&&t>=.66)||
-      (step===8&&t>=.5)||(step===9&&t>=.52)||(step===10&&t>=equityDown);
-    // tremor: how hard the run shakes (0 to 1). front: cracks left of this x have appeared.
+    const stressReached=(step===3&&breakage>=explosion.impact)||(step===7&&t>=launchAt)||(step===8&&t>=.7)||
+      (step===9&&t>=.5)||(step===10&&t>=.52)||(step===11&&t>=equityDown);
+    // tremor: how hard the run shakes (0 to 1). front: cracks left of this x have appeared. left: the marble of the run is
+    // not shown any more; gone: it is out of the picture (also at the end of misuse), so going back it does not fly back in.
     const tremor=step===2?ease(clamp((t-.2)/.5)):step===3?1-clamp(t/(fall.start*.5)):0;
     const front=step===2?mix(150,brink,t)+130:step===3?brink+130+2500*t:step===4?mix(660,250,t):-1e4;
-    return {tremor,front,stressReached,x,y,spin:(x-ends[0])/radius/rad,breakage,bridge,gate,balance,airborne,left:step>7,mates:mates(step,t,balance)};
+    return {tremor,front,stressReached,x,y,spin:(x-ends[0])/radius/rad,breakage,bridge,gate,balance,airborne,left:step>7,gone:step>7||step===7&&t>=exitAt,mates:mates(step,t,balance)};
   }
   function transforms(p){
     const explosion=typeof RunExplosion==='undefined'?require('./explosion.js'):RunExplosion;
@@ -263,7 +276,7 @@ const MarbleRun = (() => {
     return out;
   }
   // How visible each marble is (0 to 1). A stand-in fades in at the top of its fall. The marble that came down the run
-  // is left behind at the bridge once the story moves past it.
+  // is gone from the bridge on (it left the picture at misuse).
   const fades=p=>({traveller:p.left?0:1,contact:p.left?0:1,...Object.fromEntries(p.mates.map((m,i)=>['mate'+i,m.show]))});
   return {art,pose,transforms,fades,quake,ground,ride,brink,fastAt,surge,impact:()=>(typeof RunExplosion==='undefined'?require('./explosion.js'):RunExplosion).impact,fall,camera,times,ease,clamp,mix};
 })();

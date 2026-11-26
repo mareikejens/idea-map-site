@@ -115,9 +115,9 @@ dialog{background:var(--studio);border:1px solid #e2d8c8;box-shadow:0 20px 80px 
      gives its place to "What if…" (it lies over that line, so nothing jumps), which builds while the marble races to
      the break. The swap follows the marble, not a clock: app.js sets .whatif-now from the scene's progress. */
   .headline h1:has(.iam){position:relative}
-  .iam{position:absolute;inset:0 0 auto;transition:opacity .25s ease}
+  .iam{position:absolute;inset:0 0 auto;transition:opacity .45s ease}
   .whatif-now .iam{opacity:0}
-  .iam+.whatif{opacity:0;transition:opacity .35s ease .12s}
+  .iam+.whatif{opacity:0;transition:opacity .6s ease .25s}
   .whatif-now .iam+.whatif{opacity:1}
   /* A [bracketed] word in the body line lands a beat after the sentence, like a spoken pause. */
   /* "Fast." lands with a punch on the frame the marble is pushed (see surge in motion.js), not a soft fade. */
@@ -147,8 +147,8 @@ dialog{background:var(--studio);border:1px solid #e2d8c8;box-shadow:0 20px 80px 
 .headline:has(.iam) .answer{display:block;margin-top:.12em}
 .answer,.headline:has(.whatif) p{opacity:0;transition:opacity .4s ease}
 .stressed .answer,.stressed .headline:has(.whatif) p{opacity:1}
-/* The burst answers "What if…": the danger lands right after it, while the pieces still fly. */
-.stressed .answer{transition-delay:.18s}.stressed .headline:has(.whatif) p{transition-delay:.18s}
+/* The burst answers "What if…": the danger lands a breath after it, while the pieces still fly. */
+.stressed .answer{transition:opacity .6s ease .4s}.stressed .headline:has(.whatif) p{transition:opacity .6s ease .4s}
 
 /* ---- Marble page ----
    Marbles are cut to clean circles with a soft shadow and arrive spreading out from the first one. After about a second they part
@@ -262,3 +262,6 @@ html{touch-action:manipulation}.machine{user-select:none;-webkit-user-select:non
 @media(max-width:360px){.welcome-copy .namebox input{padding-left:15px;padding-right:12px}}
 /* Desktop too: "About to lose my marbles." on one line, the photo as wide as "Hi, I'm Mareike." (headline size × 6.75). */
 @media(min-width:701px){.welcome h1 span{white-space:nowrap}.welcome-copy .face img{width:calc(var(--heading)*6.75);height:auto;aspect-ratio:1}}
+/* On a computer the text-only story lines ("But even if…", "…safely.", "Because:") sit centred above the track like the
+   problem lines, instead of top left where the start of the run passes behind them. */
+@media(min-width:701px){.machine:not(.opening):not(.station) .headline{text-align:center;width:100%;max-width:none}}
