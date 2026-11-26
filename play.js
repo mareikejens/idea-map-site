@@ -471,7 +471,7 @@ const Play=(()=>{
     card.querySelector('button').onclick=()=>endFinale();
     if(reduced.matches)return;
     const soft='cubic-bezier(.2,.8,.2,1)';
-    // 1. cork in and the gift bow tied on (the "sealed" style), 2. the jar dips as if picked up and leaves through the top, 3. the page clears,
+    // 1. cork in, then the gift bow tied on (the "sealed" and "sent" styles), 2. the jar dips as if picked up and leaves through the top, 3. the page clears,
     // 4. Mareike is there, 5. the words.
     leaving=jar.animate([{transform:'none'},{transform:'translateY(9px)',offset:.2,easing:'cubic-bezier(.55,0,.9,.45)'},{transform:'translateY(-125vh) rotate(7deg)'}],{duration:1300,delay:1150,fill:'forwards'});
     card.animate([{opacity:0},{opacity:1}],{duration:450,delay:1800,fill:'backwards'});
