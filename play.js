@@ -67,9 +67,11 @@ const Play=(()=>{
   function shelfRows(list){
     const items=[...list.map(i=>'<button class="pick" data-id="'+esc(i.id)+'">'+ball(i)+'<span class="pick-name">'+esc(i.title)+'</span></button>'),
       '<button class="pick add-own"><span class="ball own" aria-hidden="true"></span><span class="pick-name">'+esc(U.ownAdd)+'</span></button>'];
-    const shelves=Math.min(2,Math.ceil(items.length/3)),base=Math.floor(items.length/shelves),extra=items.length%shelves;
+    // Always two shelves, so the block is the same height for every problem (nothing below it moves when you switch).
+    // Both rows use the top row's column width; a shorter second row is centred under it.
+    const shelves=items.length>=2?2:1,base=Math.floor(items.length/shelves),extra=items.length%shelves,cols=base+(extra?1:0);
     let html='',at=0;
-    for(let k=0;k<shelves;k++){const n=base+(k<extra?1:0);html+='<div class="rail" style="--slots:'+n+'">'+items.slice(at,at+n).join('')+'</div>';at+=n}
+    for(let k=0;k<shelves;k++){const n=base+(k<extra?1:0);html+='<div class="rail" style="--slots:'+n+';--cols:'+cols+'">'+items.slice(at,at+n).join('')+'</div>';at+=n}
     return html;
   }
   function renderArea(){
@@ -137,7 +139,19 @@ const Play=(()=>{
   }
 
   // ---------- the physical world: walls, ramp, funnel and the jar, all in the stage's own pixels ----------
+  // All five titles share one size: the largest at which the longest one still fits on one line. So the title never
+  // wraps for one problem and not another, and nothing under it moves when you switch.
+  function fitTitle(){
+    const h=stage.querySelector('.play-head h1');h.style.fontSize='';h.style.whiteSpace='';
+    const cs=getComputedStyle(h),base=parseFloat(cs.fontSize),ls=parseFloat(cs.letterSpacing)||0,avail=h.clientWidth;
+    const c=fitTitle.ctx||(fitTitle.ctx=document.createElement('canvas').getContext('2d'));
+    c.font=cs.fontStyle+' '+cs.fontWeight+' '+base+'px '+cs.fontFamily;
+    const widest=Math.max(...groups.map(g=>c.measureText(g.title).width+ls*g.title.length));
+    const size=Math.max(19,Math.min(base,base*avail/widest*.97));
+    h.style.fontSize=size+'px';if(widest*size/base<=avail)h.style.whiteSpace='nowrap';
+  }
   function layout(){
+    fitTitle();
     const S=stage.getBoundingClientRect();W=S.width;H=S.height;
     const jr=stage.querySelector('.bottle').getBoundingClientRect(),s=jr.width/150,left=jr.left-S.left,top=jr.top-S.top;
     const at=(x,y)=>({x:left+x*s,y:top+y*s});
@@ -343,11 +357,13 @@ const Play=(()=>{
     openSheet('<form class="detail own-form" novalidate><h2><span class="ball own" aria-hidden="true"></span>'+esc(U.ownTitle)+'</h2>'+
       '<input name="title" maxlength="60" required autocomplete="off" placeholder="'+esc(U.ownName)+'" aria-label="'+esc(U.ownName)+'">'+
       '<textarea name="note" rows="2" maxlength="280" placeholder="'+esc(U.ownNote)+'" aria-label="'+esc(U.ownNote)+'"></textarea>'+
-      '<fieldset class="own-areas" aria-label="'+esc(U.ownArea)+'">'+groups.map((g,k)=>'<label><input type="radio" name="g" value="'+k+'"'+(k===state.area?' checked':'')+' aria-label="'+esc(g.title)+'">'+ball({g:k,shade:0})+'</label>').join('')+
-      '<output class="own-area-name">'+esc(groups[state.area].title)+'</output></fieldset>'+
+      // The problem: the question is the field's visible label, the five marbles are the choices, and the chosen
+      // problem is named under them in its colour (the chosen marble is lifted).
+      '<fieldset class="own-areas"><legend>'+esc(U.ownArea)+'</legend><div class="own-area-choices">'+groups.map((g,k)=>'<label><input type="radio" name="g" value="'+k+'"'+(k===state.area?' checked':'')+' aria-label="'+esc(g.title)+'">'+ball({g:k,shade:0})+'</label>').join('')+'</div>'+
+      '<output class="own-area-name" style="--tint:'+groups[state.area].tint+'">'+esc(groups[state.area].title)+'</output></fieldset>'+
       '<button class="primary">'+esc(U.ownMake)+'</button></form>');
     const form=detail.querySelector('form');
-    form.onchange=()=>{form.querySelector('.own-area-name').textContent=groups[+form.g.value].title};
+    form.onchange=()=>{const out=form.querySelector('.own-area-name'),g=groups[+form.g.value];out.textContent=g.title;out.style.setProperty('--tint',g.tint)};
     form.onsubmit=e=>{
       e.preventDefault();
       const title=form.title.value.trim().replace(/\s+/g,' ');
@@ -533,6 +549,7 @@ const Play=(()=>{
     engine=Engine.create({gravity:{x:0,y:GRAVITY},positionIterations:8});statics=[];
     Events.on(engine,'collisionStart',collide);
     renderArea();remountJar();layout();refresh();
+    document.fonts?.ready.then(()=>{if(stage)layout()});
     Track.send('game');
     for(const b of stage.querySelectorAll('.area-peek,.area-step'))b.onclick=()=>setArea(state.area+ +b.dataset.step);
     // ← → move between the problems too (the story's own arrow keys stop before this screen).
