@@ -38,7 +38,8 @@ function save(){
   }))}catch{}
 }
 const esc=v=>String(v).replace(/[&<>"']/g,k=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[k]));
-function marbleImage(g,shade){return 'assets/swirl-'+g+'-'+shade+'.webp'}
+// The purple problem (0) has its own, more varied shades for marbles 1–5: periwinkle, orchid, deep indigo, lilac and wine (swirl-0-v1…v5).
+function marbleImage(g,shade){return g===0&&shade>0?'assets/swirl-0-v'+shade+'.webp':'assets/swirl-'+g+'-'+shade+'.webp'}
 function ball(idea){return idea.own?'<span aria-hidden="true" class="ball own"></span>':'<span aria-hidden="true" class="ball" style="--glass:url('+marbleImage(idea.g,idea.shade)+')"></span>'}
 function btn(key,label,cls='action'){return '<button class="'+cls+'" data-action="'+key+'">'+esc(label)+'</button>'}
 function named(v){return v.replace('{name}',()=>state.name)}
