@@ -191,12 +191,12 @@ dialog:has(.own-form){overflow:hidden;max-height:none;padding:18px 20px 18px}
 /* Where you are among the five problems: five dots in their colours under the shelves; the open one is a short bar.
    A dot grows more opaque as its ideas are read (--done, set in refresh). Tapping a dot opens that problem. */
 .problem-dots{display:flex;justify-content:center;gap:4px;margin:4px 0 0}
-.problem-dots button{position:relative;width:24px;height:24px;padding:0}
-.problem-dots button:before{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;translate:-50% -50%;border-radius:4px;background:var(--tint);opacity:calc(.3 + .4*var(--done,0));transition:width .3s var(--motion-ease),opacity .3s}
-.problem-dots button.current:before{width:22px;opacity:1}
-/* A faint arrow beside each edge marble: there is more to either side. */
-.area-peek i{position:absolute;top:50%;translate:0 -54%;font:400 20px/1 "Average Sans",sans-serif;font-style:normal;color:#b3ab9f;pointer-events:none}
-.area-peek[data-step="-1"] i{left:21px}.area-peek[data-step="1"] i{right:21px}
+.problem-dots .dot{position:relative;width:24px;height:24px;padding:0}
+.problem-dots .dot:before{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;translate:-50% -50%;border-radius:4px;background:var(--tint);opacity:calc(.3 + .4*var(--done,0));transition:width .3s var(--motion-ease),opacity .3s}
+.problem-dots .dot.current:before{width:22px;opacity:1}
+/* A faint ‹ › either side of the dots: there is more to either side. Tapping one moves one problem along. */
+.problem-dots .dots-step{width:32px;height:28px;padding:0;margin:0 6px;font:400 20px/1 "Average Sans",sans-serif;color:#b3ab9f;transition:color .2s}
+.problem-dots .dots-step:hover,.problem-dots .dots-step:active{color:var(--ink)}
 /* The title gets air: away from the site bar above and from the top shelf below (less on short screens). */
 .play .play-head{padding-top:clamp(10px,3.2vh,28px)}
 .play .play-head h1{margin-bottom:clamp(4px,2.2vh,20px)}

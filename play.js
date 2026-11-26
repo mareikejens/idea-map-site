@@ -77,15 +77,18 @@ const Play=(()=>{
     stage.querySelector('.play-head h1').textContent=g.title;
     // The dots live inside the shelves block, so the ramp and the physics (which measure from its bottom) stay clear of them.
     stage.querySelector('.play-shelves').innerHTML=shelfRows(list)+
-      '<nav class="problem-dots">'+groups.map((p,k)=>'<button data-area="'+k+'" style="--tint:'+p.tint+'"></button>').join('')+'</nav>';
-    for(const dot of stage.querySelectorAll('.problem-dots button'))dot.onclick=()=>setArea(+dot.dataset.area);
+      '<nav class="problem-dots"><button class="dots-step" data-step="-1" aria-label="'+esc(U.areaPrev)+'">‹</button>'+
+      groups.map((p,k)=>'<button class="dot" data-area="'+k+'" style="--tint:'+p.tint+'"></button>').join('')+
+      '<button class="dots-step" data-step="1" aria-label="'+esc(U.areaNext)+'">›</button></nav>';
+    for(const dot of stage.querySelectorAll('.problem-dots .dot'))dot.onclick=()=>setArea(+dot.dataset.area);
+    for(const b of stage.querySelectorAll('.dots-step'))b.onclick=()=>setArea(state.area+ +b.dataset.step);
     stage.style.setProperty('--tint',g.tint);
     for(const b of stage.querySelectorAll('.pick:not(.add-own)'))bindPick(b);
     stage.querySelector('.add-own').onclick=()=>{Sound.wake();openOwn()};
     seenAreas.add(state.area);
     // The shelves go on to both sides: a marble of the neighbouring problem looks in from each edge of the screen.
     // Until the visitor has moved once, the one on the right keeps rolling in a little (play.css, "fresh").
-    for(const peek of stage.querySelectorAll('.area-peek'))peek.innerHTML=ball({g:(state.area+ +peek.dataset.step+groups.length)%groups.length,shade:0})+'<i aria-hidden="true">'+(peek.dataset.step<0?'‹':'›')+'</i>';
+    for(const peek of stage.querySelectorAll('.area-peek'))peek.innerHTML=ball({g:(state.area+ +peek.dataset.step+groups.length)%groups.length,shade:0});
     stage.classList.toggle('fresh',seenAreas.size<2);
   }
   function refresh(){
@@ -509,8 +512,8 @@ const Play=(()=>{
     if(!asked)return ask();
     app.innerHTML='<section class="world play"><div class="play-stage">'+
       // One way to move between the five problems: they lie side by side. A marble of the next one looks in at each
-      // edge with a faint arrow (tap it, swipe, or ← →), and five dots in the problem colours under the shelves say
-      // where you are. No counter, no tab row, no written hint (see renderArea and the end of mount).
+      // edge (tap it, swipe, or ← →), and five dots in the problem colours under the shelves, with a faint ‹ › either
+      // side, say where you are. No counter, no tab row, no written hint (see renderArea and the end of mount).
       '<header class="play-head"><h1 tabindex="-1"></h1></header>'+
       '<div class="play-shelves"></div>'+
       '<button class="area-peek" data-step="-1" aria-label="'+esc(U.areaPrev)+'"></button><button class="area-peek" data-step="1" aria-label="'+esc(U.areaNext)+'"></button>'+
