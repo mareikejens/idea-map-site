@@ -146,8 +146,8 @@ window.IDEA_MAP = {
     "readingOwn": "Plus {n} of your own."
   },
   "send": {
-    "endpoint": "",
-    "trackEndpoint": "",
+    "endpoint": "https://script.google.com/macros/s/AKfycbxC7JR5gQ6ZiX41pt1VPrH12jzCMu7CCWMrEvGByDdGLg4yJaPzyigvCD4Y7Kf5pAE9/exec",
+    "trackEndpoint": "https://script.google.com/macros/s/AKfycbxC7JR5gQ6ZiX41pt1VPrH12jzCMu7CCWMrEvGByDdGLg4yJaPzyigvCD4Y7Kf5pAE9/exec",
     "bookingUrl": "https://calendar.app.google/XiNTk9uyT7pgJknx9"
   },
   "groups": [
