@@ -44,10 +44,11 @@ function ball(idea){return idea.own?'<span aria-hidden="true" class="ball own"><
 function btn(key,label,cls='action'){return '<button class="'+cls+'" data-action="'+key+'">'+esc(label)+'</button>'}
 function named(v){return v.replace('{name}',()=>state.name)}
 const jarTitle=()=>state.name?named(U.personalJar):U.jar;
-// Story controls. "Skip to the ideas" is there for visitors in a hurry.
-function controls(label=U.next,withPause=false){
+// Story controls. "Skip to the ideas" is there for visitors in a hurry: bottom right, where the eye looks for "next".
+// (There is no Pause any more: the scenes are short and wait for a tap at the end anyway.)
+function controls(label=U.next){
   const early=state.step>=1&&state.step<10;
-  return '<nav class="controls">'+btn('back',U.back,'subtle')+(early?btn('skip',U.skip,'subtle skip'):'')+(withPause?btn('pause',U.pause,'pause'):'')+btn('next',label,'keyboard-next')+'</nav>';
+  return '<nav class="controls">'+btn('back',U.back,'subtle')+(early?btn('skip',U.skip,'subtle skip'):'')+btn('next',label,'keyboard-next')+'</nav>';
 }
 let raf=0;
 function animate(duration,paint,done){
@@ -223,7 +224,8 @@ function machine(stage,step){
   const section=stage.closest('section');
   const lead=hold/(duration+hold);
   animate(duration+hold,raw=>{
-    const u=Math.max(0,(raw-lead)/(1-lead)),f=f0+(1-f0)*settle(u);
+    // Scene 1 carries its own pace (MarbleRun.surge), so it runs on plain time: "Fast." and the push share one frame.
+    const u=Math.max(0,(raw-lead)/(1-lead)),f=step===1?u:f0+(1-f0)*settle(u);
     if(step===1&&f>=MarbleRun.fastAt)section.querySelector('.late')?.classList.add('now');
     paint(f,u);
   },()=>{
@@ -297,16 +299,15 @@ function story(){
   // "I am." answers the question from the scene before, then the first danger follows.
   const lead=s===3?'<span class="iam">'+esc(state.worried==='yes'?S.iAmToo:state.worried==='no'?S.iAmBut:S.iAm)+'</span><span class="whatif">'+esc(S.whatIf)+'</span> ':'';
   const head='<h1 tabindex="-1" class="'+(s===2?'worry':'')+'">'+lead+(lead?'<span class="answer">'+title+'</span>':title)+'</h1>'+(body?'<p>'+lateWords(body)+'</p>':'')+
-    (s===2?'<p class="answers"><span class="drag-hint">'+esc(S.worriedDrag)+'</span><b class="drag-level" aria-live="polite"></b></p>':'');
+    (s===2?'<p class="answers"><b class="drag-level" aria-live="polite"></b></p>':'');
   let section=app.querySelector('.stage.machine');
   if(!section){
-    app.innerHTML='<section class="stage machine '+kind+'"><div class="headline">'+head+'</div><div class="illustration"></div>'+controls(U.next,true)+'</section>';
+    app.innerHTML='<section class="stage machine '+kind+'"><div class="headline">'+head+'</div><div class="illustration"></div>'+controls(U.next)+'</section>';
     section=app.firstElementChild;
     bindWorry(section);
   }else{
     // Same stage, next scene: only the words change. The old line fades out, then the new one fades in.
     section.classList.remove('ready');
-    const pause=section.querySelector('.pause');pause.textContent=U.pause;pause.removeAttribute('aria-pressed');
     const headline=section.querySelector('.headline');
     const swap=()=>{
       section.classList.toggle('station',kind==='station');section.classList.toggle('opening',kind==='opening');
@@ -498,10 +499,9 @@ function go(n,after){
   const held=from===2&&n>2&&app.querySelector('.headline:not(.leaving) .held:not(.shown)');
   if(held){held.classList.add('shown');askedAt=performance.now();return}
   // This scene works differently from the ones before it, and has to say so: the first tap that misses the marble
-  // does not move on. The marble hops and the line under the question lights up. The tap after that continues as usual.
+  // does not move on. The marble hops (a visual cue only: no written hints on this site). The tap after that continues as usual.
   if(from===2&&n>2&&askedAt&&!worry&&!nudgedAt&&!reduced.matches&&app.querySelector('.held.shown')){
     nudgedAt=performance.now();
-    const hint=app.querySelector('.drag-hint');hint?.classList.remove('nudge');void hint?.offsetWidth;hint?.classList.add('nudge');
     return;
   }
   state.step=n;state.paused=false;cancelAnimationFrame(raf);clearTimeout(headTimer);
@@ -550,10 +550,10 @@ app.onclick=e=>{
     case'back':go(state.step-1);break;
     case'restart':go(0);break;
     case'skip':
-      // Two scenes hold back a second line until the next tap. Mark them as shown so the jump goes straight through.
-      app.querySelector('.held')?.classList.add('shown');app.querySelector('.flood')?.classList.add('asked');
-      go(12);break;
-    case'pause':state.paused=!state.paused;b.textContent=state.paused?U.resume:U.pause;b.setAttribute('aria-pressed',state.paused);break;
+      // Straight to the marble page (all the marbles, full screen). "Are you worried?" holds back its question and
+      // hops the marble on a stray tap: mark both as done so the jump is not caught by them.
+      app.querySelector('.held')?.classList.add('shown');nudgedAt=nudgedAt||1;
+      go(10);break;
   }
 };
 document.querySelector('.mast').onclick=e=>{if(!e.target.closest('button,a')&&state.step>=1&&state.step<=11&&!sheet.open)go(state.step+1)};

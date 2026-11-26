@@ -485,6 +485,8 @@ const Play=(()=>{
   function ask(){
     const row=(k,title,sub,marble)=>'<button class="ask-row" data-ask="'+k+'">'+marble+'<span class="ask-text"><b>'+esc(title)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</span><i aria-hidden="true">›</i></button>';
     app.innerHTML='<section class="world play ask"><div class="ask-stage"><h1 tabindex="-1">'+esc(state.name?named(U.askTitleNamed):U.askTitle)+'</h1>'+
+      // The one written hint on the site, by choice: tapping a row looks like a single answer, but the jar takes as many as you like.
+      (U.askBody?'<p class="ask-sub">'+esc(U.askBody)+'</p>':'')+
       '<div class="ask-list">'+groups.map((g,k)=>row(k,g.title,'',ball({g:k,shade:0}))).join('')+
       row('own',U.askOther,U.askOtherHint,'<span class="ball own" aria-hidden="true"></span>')+'</div>'+
       '<nav class="ask-nav"><button class="subtle" data-action="back">'+esc(U.back)+'</button></nav></div></section>';   // app.js handles data-action="back"
@@ -535,17 +537,15 @@ const Play=(()=>{
       if(Math.abs(dx)>45&&Math.abs(dx)>1.5*Math.abs(dy))setArea(state.area+(dx<0?1:-1));
     };
     stage.onpointercancel=()=>{swipe=null};
-    // Nothing says that a marble holds a card, and a first visitor never tapped one. So the first marble shows it once:
-    // it hops, and its card opens. Not when a card has been read before, and not on top of another sheet.
-    if(!cardShown&&!state.read.size){
+    // Nothing says that a marble holds a card, and a first visitor never tapped one. So the first marble hops once,
+    // a visual invitation to tap it. It does not open its card by itself: a card appearing unasked confused visitors.
+    if(!cardShown&&!state.read.size&&!reduced.matches){
       const mine=stage;
       setTimeout(()=>{
         const first=mine.querySelector('.pick:not(.add-own)');
         if(stage!==mine||sheet.open||state.read.size||loose.size||!first)return;
         cardShown=true;
-        const open=()=>{if(stage===mine&&!sheet.open)openIdea(byId(first.dataset.id))};
-        if(reduced.matches)open();
-        else first.querySelector('.ball').animate([{translate:'0 0',scale:'1'},{translate:'0 -16px',scale:'1.12',offset:.4},{translate:'0 0',scale:'1',offset:.8},{translate:'0 -4px',offset:.9},{translate:'0 0'}],{duration:620,easing:'ease-out'}).finished.then(open);
+        first.querySelector('.ball').animate([{translate:'0 0',scale:'1'},{translate:'0 -16px',scale:'1.12',offset:.4},{translate:'0 0',scale:'1',offset:.8},{translate:'0 -4px',offset:.9},{translate:'0 0'}],{duration:620,easing:'ease-out'});
       },1200);
     }
   }

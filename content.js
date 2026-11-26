@@ -33,13 +33,12 @@ window.IDEA_MAP = {
     }
   },
   "story": {
-    "intro": "Transformative AI is coming.",
+    "intro": "Transformative AI\nis coming.",
     "introBody": "It’s going to change how we live and work. [Fast.]",
     "worried": "What about you, {name}?",
     "worriedGuest": "What about you?",
     "worriedAsk": "Are you worried?",
     "loss": "We lose control.",
-    "worriedDrag": "Move the marble to answer.",
     "worriedLevels": ["Not really", "A little", "Worried", "Very worried"],
     "iAm": "I am.",
     "iAmToo": "So am I.",
@@ -85,7 +84,7 @@ window.IDEA_MAP = {
     "hintDrop": "Tap a marble to read it. Drag it off the shelf to drop it in.",
     "askTitle": "What would you like to talk about?",
     "askTitleNamed": "{name}, what would you like to talk about?",
-    "askBody": "Pick where to start. You can visit the others too.",
+    "askBody": "Start with one. You can pick as many ideas as you like.",
     "askIdeas": "{n} ideas",
     "askOther": "Something else",
     "askOtherHint": "Add your own idea",
