@@ -2,8 +2,8 @@
 # Publish the idea map to mareikejens.com (it is the homepage since 26 Nov 2026).
 # Takes what is on this repo's main branch on GitHub (so only merged work goes live), copies it over the root of the
 # homepage repo (mareikejens/mareikejens.com) and pushes. GitHub Pages then serves it.
-# Files that belong only to the homepage repo stay untouched: CNAME, imprint.html, privacy.html, favicons, robots.txt,
-# sitemap.xml, branding/ and previous/ (the old homepage). Nothing is deleted there; a file removed from the idea map
+# Files that belong only to the homepage repo stay untouched: CNAME, imprint.html, privacy.html, robots.txt,
+# sitemap.xml, branding/ and previous/ (the old homepage). The favicons come from this repo (the blue marble). Nothing is deleted there; a file removed from the idea map
 # stays until removed by hand.
 #
 # Usage: scripts/publish-home.sh
