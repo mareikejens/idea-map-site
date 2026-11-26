@@ -63,6 +63,28 @@ function animate(duration,paint,done){
   paint(reduced.matches?1:0);raf=requestAnimationFrame(tick);
 }
 let lastCamera=null,lastPose=null,lastScene=0,coverX=-300,openerStart=-115,rig=null;
+// "Are you worried?" is answered with the marble itself. While the question stands, the visitor can drag the marble along the
+// rail: back up the calm slope, or towards the edge. Let go and gravity takes it: it always ends up at the brink, later or sooner.
+// worry = {x: place on the rail, v: speed, dragging, anchor: where the camera stays, level: 0 calm … 1 at the edge}.
+let worry=null,rolledIn=false,dragged=false;
+const worryBack=150;   // how far back from the brink the marble can be pulled, in drawing units
+const worryLevel=x=>MarbleRun.clamp((x-(MarbleRun.brink-worryBack))/worryBack);
+function worryStep(now){
+  const w=worry;
+  if(!w||w.dragging||!w.released){if(w)w.last=now;return}
+  const dt=Math.min(.05,(now-w.last)/1000);w.last=now;
+  // Gravity along the rail: the steeper it gets towards the brink, the harder it pulls.
+  const slope=(MarbleRun.ground(w.x+1)-MarbleRun.ground(w.x-1))/2;
+  w.v+=1300*slope*dt;w.x+=w.v*dt;
+  const back=MarbleRun.brink-worryBack;
+  if(w.x<back){w.x=back;w.v=-w.v*.3}
+  if(w.x>=MarbleRun.brink&&!w.done){
+    // Over the edge: this is the answer, and the story goes on without another tap.
+    w.done=true;rolledIn=true;
+    state.worried=w.answer;save();Track.send('worried',{answer:w.answer,level:+w.level.toFixed(2)});
+    setTimeout(()=>{if(state.step===2)go(3)},0);
+  }
+}
 // Every scene waits for a click, so the marble starts from rest and comes to rest: speed ramps up, holds, ramps down.
 function settle(u){const r=.16,v=1/(1-r);return u<r?v*u*u/(2*r):u>1-r?1-v*(1-u)*(1-u)/(2*r):v*(u-r/2)}
 function machine(stage,step){
@@ -85,7 +107,8 @@ function machine(stage,step){
   // A scene left early hands its marble over: for half a second the pose glides from where it was to where it belongs.
   const joinSpan=f0?0:MarbleRun.clamp(520/duration);
   // "I am." and the marble goes: only a breath at the brink while the words change, then it races down the drop.
-  const hold=step===3&&!f0?700:0;
+  const hold=step===3&&!f0&&!rolledIn?700:0;
+  rolledIn=false;worry=null;
   lastScene=step;
   // f is the place in the scene's choreography, u the plain time since the scene began (both 0 to 1).
   function paint(f,u){
@@ -99,6 +122,14 @@ function machine(stage,step){
       for(const key of ['x','y','spin','breakage','gate','bridge','balance']){
         pose[key]=MarbleRun.mix(entryPose[key],pose[key],join);
       }
+    }
+    // The visitor has the marble: it is where they put it, and the run shivers more the closer it is to the edge.
+    let follow=pose;
+    if(step===2&&worry){
+      worryStep(performance.now());
+      const at=MarbleRun.ride(Math.min(worry.x,MarbleRun.brink+40));
+      follow=worry.anchor;
+      pose={...pose,x:at.x,y:at.y,spin:(worry.x+115)*180/(19*Math.PI),tremor:.12+.88*worryLevel(worry.x)};
     }
     lastPose=pose;
     // Worry: the run shivers under the marble (which rides along with its section) and cracks draw themselves in ahead of it.
@@ -120,8 +151,9 @@ function machine(stage,step){
     let cx,cy,width;
     if(closeUp){
       width=mobile?340:780;
-      cx=pose.x-(mobile?.04:.17)*width;
-      cy=pose.y-(mobile?.16:.13)*width*rect.height/Math.max(1,rect.width);
+      // While the marble is in the visitor's hand the camera stays put, or dragging would drag the picture along.
+      cx=follow.x-(mobile?.04:.17)*width;
+      cy=follow.y-(mobile?.16:.13)*width*rect.height/Math.max(1,rect.width);
       if(step&&carried){
         // Ease from the previous scene's framing into following the marble, in either direction.
         const enter=MarbleRun.ease(MarbleRun.clamp(u*3.5));
@@ -224,11 +256,12 @@ function story(){
   // "I am." answers the question from the scene before, then the first danger follows.
   const lead=s===3?'<span class="iam">'+esc(state.worried==='yes'?S.iAmToo:S.iAm)+'</span><span class="whatif">'+esc(S.whatIf)+'</span> ':'';
   const head='<h1 tabindex="-1" class="'+(s===2?'worry':'')+'">'+lead+(lead?'<span class="answer">'+title+'</span>':title)+'</h1>'+(body?'<p>'+lateWords(body)+'</p>':'')+
-    (s===2?'<div class="answers">'+S.worriedAnswers.map(([key,label])=>'<button class="answer-chip" data-action="worry" data-answer="'+esc(key)+'">'+esc(label)+'</button>').join('')+'</div>':'');
+    (s===2?'<p class="answers"><span class="drag-hint">'+esc(S.worriedDrag)+'</span><b class="drag-level" aria-live="polite"></b></p>':'');
   let section=app.querySelector('.stage.machine');
   if(!section){
     app.innerHTML='<section class="stage machine '+kind+'"><div class="headline">'+head+'</div><div class="illustration"></div>'+controls(U.next,true)+'</section>';
     section=app.firstElementChild;
+    bindWorry(section);
   }else{
     // Same stage, next scene: only the words change. The old line fades out, then the new one fades in.
     section.classList.remove('ready');
@@ -243,6 +276,48 @@ function story(){
   machine(section.querySelector('.illustration'),s);
 }
 let headTimer=0;
+// Dragging the marble on the "Are you worried?" scene. Pointer positions are turned into places on the rail through the camera.
+function bindWorry(section){
+  const stage=section.querySelector('.illustration');
+  const active=()=>state.step===2&&section.classList.contains('ready')&&!!section.querySelector('.held.shown')&&lastCamera&&lastPose;
+  const railX=e=>{const r=stage.getBoundingClientRect();return lastCamera[0]+((e.clientX-r.left)/r.width-.5)*lastCamera[2]};
+  const say=()=>{
+    const label=section.querySelector('.drag-level');if(!label||!worry)return;
+    const level=worry.level=worryLevel(worry.x),k=level>=1?3:level>.66?2:level>.33?1:0;
+    worry.answer=k>=2?'yes':k===1?'little':'no';label.textContent=S.worriedLevels[k];
+    section.classList.add('dragging');
+  };
+  let track=null;
+  section.addEventListener('pointerdown',e=>{
+    if(!active()||e.target.closest('button,a'))return;
+    // Only a press on the marble (generously measured, for thumbs) picks it up. A press anywhere else is still "continue".
+    const r=stage.getBoundingClientRect(),px=r.width/lastCamera[2];
+    const mx=r.left+((lastPose.x-lastCamera[0])/lastCamera[2]+.5)*r.width,my=r.top+r.height/2+(lastPose.y-lastCamera[1])*px;
+    if(Math.hypot(e.clientX-mx,e.clientY-my)>Math.max(34,26*px))return;
+    const x=worry?worry.x:MarbleRun.brink;
+    worry={x,v:0,dragging:true,released:false,anchor:worry?worry.anchor:{x:lastPose.x,y:lastPose.y},grab:railX(e)-x,last:performance.now()};
+    track={x,t:performance.now(),moved:false};
+    section.setPointerCapture?.(e.pointerId);say();
+  });
+  section.addEventListener('pointermove',e=>{
+    if(!worry?.dragging||!track)return;
+    const now=performance.now(),x=Math.max(MarbleRun.brink-worryBack,Math.min(MarbleRun.brink+30,railX(e)-worry.grab));
+    // Remember how fast the hand was moving, so a flick throws the marble.
+    if(now>track.t)worry.v=.6*worry.v+.4*(x-worry.x)/((now-track.t)/1000);
+    if(Math.abs(x-track.x)>3)track.moved=true;
+    worry.x=x;track.t=now;say();
+  });
+  const drop=()=>{
+    if(!worry?.dragging)return;
+    worry.dragging=false;worry.released=true;worry.last=performance.now();
+    worry.v=Math.max(-420,Math.min(520,performance.now()-track.t>90?0:worry.v));
+    // The browser sends a click after the release. That click must not count as "continue".
+    dragged=track.moved;setTimeout(()=>{dragged=false},0);
+    if(reduced.matches){worry.x=MarbleRun.brink;worryStep(performance.now()+16)}
+    track=null;
+  };
+  section.addEventListener('pointerup',drop);section.addEventListener('pointercancel',drop);
+}
 // The marble page: the screen fills with marbles, they part around a clearing, the sentence appears there and the question then replaces it.
 // ?flood opens this page directly, for reviewing it without replaying the story.
 function fillMarbleField(){
@@ -416,6 +491,7 @@ function cardSections(idea){
 sheet.querySelector('.x').onclick=()=>sheet.close();
 sheet.addEventListener('click',e=>{if(e.target===sheet){const r=sheet.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)sheet.close()}});
 app.onclick=e=>{
+  if(dragged){dragged=false;return}
   const b=e.target.closest('button');
   if(!b){
     if(state.step>=1&&state.step<=11&&!e.target.closest('a,input,textarea,select,form,dialog')&&!window.getSelection()?.toString())go(state.step+1);
@@ -424,8 +500,6 @@ app.onclick=e=>{
   switch(b.dataset.action){
     case'next':go(state.step+1);break;
     case'back':go(state.step-1);break;
-    // An answer to "Are you worried?" is remembered (it travels with the jar) and moves the story on.
-    case'worry':state.worried=b.dataset.answer;save();Track.send('worried',{answer:state.worried});go(3);break;
     case'restart':go(0);break;
     case'skip':
       // Two scenes hold back a second line until the next tap. Mark them as shown so the jump goes straight through.

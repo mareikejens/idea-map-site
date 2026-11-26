@@ -145,10 +145,11 @@
 .controls .cue{display:none;margin-left:auto;padding:10px 2px;pointer-events:none;animation:cue-breathe 2.2s ease-in-out infinite}
 .ready .controls .cue,.world:has(.flood) .controls .cue{display:block}
 @keyframes cue-breathe{0%,100%{opacity:.45}50%{opacity:1}}
-.answers{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;opacity:0;pointer-events:none;transition:opacity .4s ease .3s}
-.headline:has(.held.shown) .answers{opacity:1;pointer-events:auto}
-.answer-chip{padding:10px 22px;font-size:max(1em,16px);min-height:44px;border:1px solid #2929283d;border-radius:30px;background:#fffdf9;transition:background .15s,border-color .15s}
-.answer-chip:hover{background:#fff;border-color:#292928}
+.answers{display:block;margin:18px 0 0;max-width:22em;opacity:0;transition:opacity .4s ease .3s}
+.headline:has(.held.shown) .answers{opacity:1}
+.drag-level{display:none;font-family:"Crete Round",Georgia,serif;font-weight:400;font-size:1.45em;color:#a32b36}
+.dragging .drag-hint{display:none}.dragging .drag-level{display:block}
+.stage:has(.held.shown) .illustration{touch-action:none}
 .start-hint{margin:8px 0 0;font-size:var(--body)}
 .welcome-copy .start-hint+form{margin-top:14px}
 .start-hint:empty{display:none}

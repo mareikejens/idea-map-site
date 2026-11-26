@@ -212,6 +212,6 @@ const MarbleRun = (() => {
   }
   // How visible each station marble is (0 to 1): they fade in at the top of their fall.
   const fades=p=>Object.fromEntries(p.mates.map((m,i)=>['mate'+i,m.show]));
-  return {art,pose,transforms,fades,quake,ground,fall,camera,times,ease,clamp,mix};
+  return {art,pose,transforms,fades,quake,ground,ride,brink,fall,camera,times,ease,clamp,mix};
 })();
 if(typeof module!=='undefined')module.exports=MarbleRun;
