@@ -194,9 +194,21 @@ dialog:has(.own-form){overflow:hidden;max-height:none;padding:18px 20px 18px}
 .problem-dots .dot{position:relative;width:24px;height:24px;padding:0}
 .problem-dots .dot:before{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;translate:-50% -50%;border-radius:4px;background:var(--tint);opacity:calc(.3 + .4*var(--done,0));transition:width .3s var(--motion-ease),opacity .3s}
 .problem-dots .dot.current:before{width:22px;opacity:1}
-/* A faint ‹ › either side of the dots: there is more to either side. Tapping one moves one problem along. */
-.problem-dots .dots-step{width:32px;height:28px;padding:0;margin:0 6px;font:400 20px/1 "Average Sans",sans-serif;color:#b3ab9f;transition:color .2s}
-.problem-dots .dots-step:hover,.problem-dots .dots-step:active{color:var(--ink)}
+/* Above the title, the question this screen answers; beside it, ‹ › to step one problem along. The arrow glyphs are
+   centred on their ink, not their box (their ink sits ~4px low in the box), so they line up with the title. */
+.play .area-ask{margin:0 0 4px;font-size:14px;color:#7a746b}
+.area-title{display:flex;align-items:center;gap:8px}
+.area-title h1{flex:1;min-width:0}
+.area-steps{display:flex;flex:none;margin-right:-10px}
+.area-step{width:36px;height:36px;padding:0 0 4px;border-radius:50%;font:400 24px/1 "Average Sans",sans-serif;color:#9d968b;transition:color .2s,background .2s}
+.area-step:hover,.area-step:active{color:var(--ink);background:#efe6d9}
 /* The title gets air: away from the site bar above and from the top shelf below (less on short screens). */
 .play .play-head{padding-top:clamp(10px,3.2vh,28px)}
-.play .play-head h1{margin-bottom:clamp(4px,2.2vh,20px)}
+.area-title{margin-bottom:clamp(4px,2.2vh,20px)}
+/* The visitor's name on the jar: a paper label stuck on the upper body (40–52% of the jar's height, clear of the marbles
+   that collect at the bottom), set in a high-contrast serif. Didot / Bodoni on Apple devices, Georgia elsewhere. */
+.jar-tag{position:absolute;left:21%;right:21%;top:40%;height:12%;display:block;text-align:center;padding:0 6%;
+  background:linear-gradient(#fdfaf3,#f6efe2);border:1px solid #dccfba;border-radius:2px;box-shadow:0 1px 2px #6e553722;rotate:-2.5deg;
+  font:400 calc(17px*var(--jar-scale))/calc(196px*var(--jar-scale)*.12) Didot,"Bodoni 72","Bodoni MT","Playfair Display",Georgia,serif;letter-spacing:.01em;color:#2a2622;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.jar-tag[hidden],.jar-name[hidden]{display:none}

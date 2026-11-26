@@ -89,6 +89,7 @@ window.IDEA_MAP = {
     "askOther": "Something else",
     "askOtherHint": "Add your own idea",
     "hintTakeOut": "Changed your mind? Tap the jar to take a marble out.",
+    "areaAsk": "What are you most concerned about?",
     "areaOf": "Problem {n} of {total}",
     "areaRead": "{read} of {total} ideas read",
     "areaPrev": "Previous problem",

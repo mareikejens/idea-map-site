@@ -77,11 +77,8 @@ const Play=(()=>{
     stage.querySelector('.play-head h1').textContent=g.title;
     // The dots live inside the shelves block, so the ramp and the physics (which measure from its bottom) stay clear of them.
     stage.querySelector('.play-shelves').innerHTML=shelfRows(list)+
-      '<nav class="problem-dots"><button class="dots-step" data-step="-1" aria-label="'+esc(U.areaPrev)+'">‹</button>'+
-      groups.map((p,k)=>'<button class="dot" data-area="'+k+'" style="--tint:'+p.tint+'"></button>').join('')+
-      '<button class="dots-step" data-step="1" aria-label="'+esc(U.areaNext)+'">›</button></nav>';
+      '<nav class="problem-dots">'+groups.map((p,k)=>'<button class="dot" data-area="'+k+'" style="--tint:'+p.tint+'"></button>').join('')+'</nav>';
     for(const dot of stage.querySelectorAll('.problem-dots .dot'))dot.onclick=()=>setArea(+dot.dataset.area);
-    for(const b of stage.querySelectorAll('.dots-step'))b.onclick=()=>setArea(state.area+ +b.dataset.step);
     stage.style.setProperty('--tint',g.tint);
     for(const b of stage.querySelectorAll('.pick:not(.add-own)'))bindPick(b);
     stage.querySelector('.add-own').onclick=()=>{Sound.wake();openOwn()};
@@ -93,8 +90,12 @@ const Play=(()=>{
   }
   function refresh(){
     const count=state.picked.size;
-    stage.querySelector('.jar-name').textContent=jarTitle();
+    // A named visitor's jar carries their name on a paper label (it moves with the jar); the line under it then shows
+    // only the count. Guests keep "Your jar" under the jar. The button says both to screen readers.
+    const tag=stage.querySelector('.jar-tag');tag.textContent=state.name;tag.hidden=!state.name;
+    stage.querySelector('.jar-name').textContent=jarTitle();stage.querySelector('.jar-name').hidden=!!state.name;
     stage.querySelector('.jar-count').textContent=count;
+    stage.querySelector('.play-jar').setAttribute('aria-label',jarTitle()+', '+count);
     for(const b of stage.querySelectorAll('.pick')){
       b.classList.toggle('selected',state.picked.has(b.dataset.id));
       b.classList.toggle('away',loose.has(b.dataset.id));
@@ -153,8 +154,10 @@ const Play=(()=>{
       layout.railY=x=>x<mouth.left?mouth.y-drop+drop*clamp(x/mouth.left,0,1):x>mouth.right?mouth.y-drop+drop*clamp((W-x)/(W-mouth.right),0,1):mouth.y;
       layout.funnelTop=mouth.y-drop-30;
       // Above the funnel, one sloped ramp turns the screen into a small marble run: the marble rolls one way, drops, rolls back.
-      // It is left out when there is no room between the shelves and the funnel (small phones, full shelves).
-      const shelves=stage.querySelector('.play-shelves').getBoundingClientRect(),first=shelves.bottom-S.top+34,reach=W-84,rise=reach*.33;
+      // It reaches a little past the middle (so it drops onto the far funnel rail) and sits halfway between the shelves and
+      // the funnel, with equal room above and below. It is left out when there is no room (small phones, full shelves).
+      const shelves=stage.querySelector('.play-shelves').getBoundingClientRect(),reach=W*.6,rise=reach*.33,
+        room=(mouth.y-drop)-(shelves.bottom-S.top),first=shelves.bottom-S.top+Math.max(34,(room-rise)/2);
       stage.style.setProperty('--peek-y',(stage.querySelector('.pick .ball').getBoundingClientRect().top-S.top+parseFloat(getComputedStyle(stage).getPropertyValue('--diam'))/2)+'px');   // level with the marbles on the top shelf
       for(let k=0,y=first;k<1&&y+rise<=mouth.y-drop-30;k++,y+=rise+62){
         const fromLeft=k%2===0,a={x:fromLeft?-4:W+4,y},b={x:fromLeft?reach:W-reach,y:y+rise};
@@ -514,11 +517,12 @@ const Play=(()=>{
       // One way to move between the five problems: they lie side by side. A marble of the next one looks in at each
       // edge (tap it, swipe, or ← →), and five dots in the problem colours under the shelves, with a faint ‹ › either
       // side, say where you are. No counter, no tab row, no written hint (see renderArea and the end of mount).
-      '<header class="play-head"><h1 tabindex="-1"></h1></header>'+
+      '<header class="play-head"><p class="area-ask">'+esc(U.areaAsk)+'</p><div class="area-title"><h1 tabindex="-1"></h1>'+
+      '<span class="area-steps"><button class="area-step" data-step="-1" aria-label="'+esc(U.areaPrev)+'">‹</button><button class="area-step" data-step="1" aria-label="'+esc(U.areaNext)+'">›</button></span></div></header>'+
       '<div class="play-shelves"></div>'+
       '<button class="area-peek" data-step="-1" aria-label="'+esc(U.areaPrev)+'"></button><button class="area-peek" data-step="1" aria-label="'+esc(U.areaNext)+'"></button>'+
       '<svg class="play-art" aria-hidden="true"></svg>'+
-      '<button class="play-jar"><span class="bottle" aria-hidden="true"><span class="bottle-inner"><span class="bottle-scale">'+bottleArt+'</span><span class="cork"></span></span></span>'+
+      '<button class="play-jar"><span class="bottle" aria-hidden="true"><span class="bottle-inner"><span class="bottle-scale">'+bottleArt+'</span><span class="cork"></span><span class="jar-tag"></span></span></span>'+
       '<span class="jar-label"><span class="jar-name"></span><span class="jar-count">0</span></span><span class="jar-open">'+esc(U.jarOpen)+'</span></button>'+
       '<button class="play-back subtle" data-action="restart">'+esc(U.back)+'</button>'+
       '<button class="send-jar primary" hidden></button>'+
@@ -528,7 +532,7 @@ const Play=(()=>{
     Events.on(engine,'collisionStart',collide);
     renderArea();remountJar();layout();refresh();
     Track.send('game');
-    for(const b of stage.querySelectorAll('.area-peek'))b.onclick=()=>setArea(state.area+ +b.dataset.step);
+    for(const b of stage.querySelectorAll('.area-peek,.area-step'))b.onclick=()=>setArea(state.area+ +b.dataset.step);
     // ← → move between the problems too (the story's own arrow keys stop before this screen).
     document.removeEventListener('keydown',areaKeys);document.addEventListener('keydown',areaKeys);
     stage.querySelector('.play-jar').onclick=openJar;
