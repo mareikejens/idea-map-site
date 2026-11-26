@@ -59,7 +59,8 @@ Good to know:
 
 - **Leaving out test visits:** a visitor is left out automatically when any of their rows has "test" in the name
   (Test, Mareike Test, Setup test ...; `TEST_NAME` in `Code.gs`). To leave out everything before a moment, type a date and
-  time into cell **B2** of the tab, for example `26/11/2026 21:45`: only visits from then on are counted. B2 is the only
+  time into cell **B2** of the tab, for example `26/11/2026 21:45`: only visits from then on are counted, and the tab
+  recalculates a moment after you press Enter. B2 is the only
   cell to edit: everything else is overwritten. If the entry stays left-aligned, Sheets read it as text and it does nothing.
 - **Time on the site** runs from a visitor's first to their last recorded action. Pauses longer than 10 minutes are not
   counted (`BREAK_MINUTES` in `Code.gs`). Reading the last screen after the last action is not measured.
