@@ -111,6 +111,10 @@ function logEvent(d) {
 const DASHBOARD = 'Dashboard';
 const BREAK_MINUTES = 10;                            // a pause longer than this does not count as time on the site
 const TEST_VISITOR = /^(claude-check|setuptest)/;   // visits made by the setup checks: never counted
+// How far a visitor got. The site sends "scene" events numbered 2 to 13 ("12: All my ideas ...", 13 is the concern screen);
+// the older events still place visitors who came before those existed. 14 = the shelves with the idea marbles.
+const STEP_LABELS = { 1: '1: Started the story', 3: '3: Answered "Are you worried?"', 13: '13: Concern screen', 14: '14: Shelves with the idea marbles' };
+const STEP_OF = { start: 1, worried: 3, ask: 13, game: 14 };
 const TEST_NAME = /test/i;                           // a visitor who gave a name with "test" in it (Test, Mareike Test, Setup test ...): never counted
 
 // Runs by itself whenever someone edits the Sheet by hand (a "simple trigger": no setup, no permission to give). Typing a date
@@ -136,7 +140,7 @@ function refreshDashboard() {
     tab.getRangeList(page.dates).setNumberFormat('dd/mm/yyyy hh:mm').setHorizontalAlignment('left');
     tab.getRange('B2').setNumberFormat('dd/mm/yyyy').setBackground('#fff8e1');   // the one cell meant for typing
     tab.setColumnWidth(1, 260);
-    tab.setColumnWidths(2, 8, 150);                  // wide enough for the column headings and the date in D1
+    tab.setColumnWidths(2, page.width - 1, 150);                  // wide enough for the column headings and the date in D1
   } finally { if (lock) { try { lock.releaseLock(); } catch (err) {} } }
 }
 
@@ -149,9 +153,9 @@ function summarise(events, jars, from) {
   for (const [, id, name] of events) if (TEST_NAME.test(String(name || ''))) tests.add(String(id));
   for (const [, name, , , , , , , , id] of jars) if (TEST_NAME.test(String(name || ''))) tests.add(String(id));
   const counts = (when, id) => !!id && !TEST_VISITOR.test(String(id)) && !tests.has(String(id)) && when instanceof Date && (!from || when >= from);
-  const visitors = new Map(), marbles = new Map(), concerns = new Map();
+  const visitors = new Map(), marbles = new Map(), concerns = new Map(), labels = Object.assign({}, STEP_LABELS), skips = new Map();
   const visitor = (id, when) => {
-    if (!visitors.has(id)) visitors.set(id, { id: String(id), name: '', first: when, last: when, minutes: 0, did: new Set(), worried: '', concern: '', opened: new Set(), jar: [], sent: false, coffee: false });
+    if (!visitors.has(id)) visitors.set(id, { id: String(id), name: '', first: when, last: when, minutes: 0, did: new Set(), worried: '', concern: '', opened: new Set(), jar: [], sent: false, coffee: false, furthest: 0, skippedFrom: '' });
     return visitors.get(id);
   };
   // Columns as written in logEvent: When, Visitor, Name, Event, Detail, Seconds, Jar so far.
@@ -166,6 +170,13 @@ function summarise(events, jars, from) {
     v.did.add(type);
     v.jar = String(jar || '').split(',').map(s => s.trim()).filter(Boolean);
     if (type === 'worried') v.worried = title;
+    const step = type === 'scene' ? parseInt(title, 10) : STEP_OF[type] || 0;
+    if (type === 'scene' && step) labels[step] = title;   // the headline the site sent, latest wins
+    if (step > v.furthest) v.furthest = step;
+    if (type === 'skip' && !v.skippedFrom) {
+      v.skippedFrom = title;
+      skips.set(title, (skips.get(title) || 0) + 1);
+    }
     if (type === 'ask' && title) {
       v.concern = title;
       if (!concerns.has(title)) concerns.set(title, new Set());
@@ -194,6 +205,12 @@ function summarise(events, jars, from) {
   return {
     visitors: all.length,
     started: did('start'), answered: did('worried'), reached: did('game'), opened: did('open'), added: did('add'),
+    sawField: all.filter(v => v.furthest >= 12).length, skipped: all.filter(v => v.skippedFrom).length,
+    concernScreen: all.filter(v => v.furthest >= 13).length, pickedConcern: all.filter(v => v.concern).length,
+    skips: [...skips].sort((a, b) => b[1] - a[1]).map(([from, n]) => from + ' (' + n + ')').join(', '),
+    // The funnel: per step, how many got at least that far and how many stopped there.
+    steps: Object.keys(labels).map(Number).sort((a, b) => a - b).map(step => ({ label: labels[step],
+      reached: all.filter(v => v.furthest >= step).length, stopped: all.filter(v => v.furthest === step).length })),
     sent: all.filter(v => v.sent).length, coffee: all.filter(v => v.coffee).length,
     worried: ['yes', 'little', 'no'].map(answer => [answer, all.filter(v => v.worried === answer).length]),
     medianMinutes: times.length ? round(times.length % 2 ? times[middle] : (times[middle - 1] + times[middle]) / 2) : 0,
@@ -202,7 +219,7 @@ function summarise(events, jars, from) {
       .sort((a, b) => b.visitors - a.visitors || b.adds - a.adds || b.seconds - a.seconds || a.title.localeCompare(b.title)),
     concerns: [...concerns].map(([title, who]) => ({ title, visitors: who.size })).sort((a, b) => b.visitors - a.visitors || a.title.localeCompare(b.title)),
     people: all.sort((a, b) => b.first - a.first).map(v => ({ first: v.first, name: v.name, minutes: round(v.minutes), worried: v.worried, concern: v.concern,
-      opened: v.opened.size, inJar: v.jar.length, sent: v.sent ? (v.coffee ? 'yes, with coffee' : 'yes') : '', id: v.id }))
+      furthest: labels[v.furthest] || '', skippedFrom: v.skippedFrom, opened: v.opened.size, inJar: v.jar.length, sent: v.sent ? (v.coffee ? 'yes, with coffee' : 'yes') : '', id: v.id }))
   };
 }
 
@@ -210,19 +227,27 @@ function summarise(events, jars, from) {
 function dashboardRows(s, from, now) {
   const rows = [], bold = [], dates = ['D1'];
   const title = text => { rows.push([]); rows.push([text]); bold.push('A' + rows.length); };
-  const header = cells => { rows.push(cells); bold.push('A' + rows.length + ':I' + rows.length); };
+  const width = 11, last = String.fromCharCode(64 + width);
+  const header = cells => { rows.push(cells); bold.push('A' + rows.length + ':' + last + rows.length); };
   rows.push(['Idea map dashboard', '', 'Updated', now]); bold.push('A1');
   rows.push(['Counting visits from', from || '', 'Type a date and time into B2 to leave out earlier visits. Empty counts everything. Visitors with "test" in their name are always left out.']);
   title('Overview');
   rows.push(['Unique visitors', s.visitors]);
   rows.push(['Started the story', s.started]);
   rows.push(['Answered "Are you worried?"', s.answered, s.worried.map(([answer, n]) => answer + ': ' + n).join(', ')]);
-  rows.push(['Reached the marbles', s.reached]);
+  rows.push(['Saw the marble field (all the marbles)', s.sawField, s.skipped ? s.skipped + ' used Skip to get there' : '']);
+  rows.push(['Reached the concern screen', s.concernScreen]);
+  rows.push(['Picked a concern', s.pickedConcern]);
+  rows.push(['Reached the shelves with the idea marbles', s.reached]);
   rows.push(['Opened at least one marble', s.opened]);
   rows.push(['Put at least one marble in the jar', s.added]);
   rows.push(['Sent a jar', s.sent, s.coffee ? s.coffee + ' with a coffee request' : '']);
   rows.push(['Time on the site, median (minutes)', s.medianMinutes, 'Half of the visitors stayed longer than this, half shorter.']);
   rows.push(['Time on the site, average (minutes)', s.averageMinutes, 'From first to last action; pauses over ' + BREAK_MINUTES + ' minutes are not counted.']);
+  title('How far visitors got');
+  header(['Step', 'Got at least this far', 'Stopped here']);
+  for (const st of s.steps) rows.push([st.label, st.reached, st.stopped]);
+  if (s.skips) rows.push(['Used Skip from', s.skips]);
   title('Marbles');
   header(['Marble', 'Visitors who opened it', 'Times opened', 'Put in a jar', 'Taken out again', 'Seconds read (all visitors)']);
   for (const m of s.marbles) rows.push([m.title, m.visitors, m.opens, m.adds, m.removes, m.seconds]);
@@ -230,11 +255,10 @@ function dashboardRows(s, from, now) {
   header(['Concern', 'Visitors']);
   for (const c of s.concerns) rows.push([c.title, c.visitors]);
   title('Visitors, latest first');
-  header(['First seen', 'Name', 'Minutes on the site', 'Worried', 'Concern picked', 'Marbles opened', 'Marbles in the jar', 'Sent the jar', 'Visitor']);
+  header(['First seen', 'Name', 'Minutes on the site', 'Worried', 'Got as far as', 'Skipped from', 'Concern picked', 'Marbles opened', 'Marbles in the jar', 'Sent the jar', 'Visitor']);
   const firstPerson = rows.length + 1;
-  for (const p of s.people) rows.push([p.first, p.name, p.minutes, p.worried, p.concern, p.opened, p.inJar, p.sent, p.id]);
+  for (const p of s.people) rows.push([p.first, p.name, p.minutes, p.worried, p.furthest, p.skippedFrom, p.concern, p.opened, p.inJar, p.sent, p.id]);
   if (s.people.length) dates.push('A' + firstPerson + ':A' + rows.length);
-  const width = 9;
   return { rows: rows.map(r => r.concat(Array(width - r.length).fill(''))), width, bold, dates };
 }
 
