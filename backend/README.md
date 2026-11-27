@@ -49,11 +49,15 @@ Before you switch this on, tell visitors: put a sentence into `"notice"` under `
 The script keeps a **Dashboard** tab in the same Sheet. It is rewritten after every event and every jar, so it is always
 current, also on a phone. It shows:
 
-- **Overview:** unique visitors, how many started the story, reached the marbles, opened a marble, filled and sent a jar,
-  and the median and average time on the site.
+- **Overview:** unique visitors, how many started the story, saw the marble field (and how many of them used Skip), reached
+  the concern screen, picked a concern, reached the shelves, opened a marble, filled and sent a jar, and the median and
+  average time on the site.
+- **How far visitors got:** one row per screen of the story (numbered as in `app.js`, with its headline), how many got at
+  least that far and how many stopped there; below it, from which scenes people pressed Skip. Skip jumps to 12, so a
+  visitor who skipped counts as having passed the scenes in between.
 - **Marbles:** per marble, how many visitors opened it, how often, how often it went into a jar, and the seconds it was read.
 - **Concern picked** on "What concerns you most?".
-- **Visitors**, latest first: time on the site, answers, marbles opened and in the jar, whether the jar was sent.
+- **Visitors**, latest first: time on the site, answers, how far they got, where they skipped, marbles opened and in the jar, whether the jar was sent.
 
 Good to know:
 
