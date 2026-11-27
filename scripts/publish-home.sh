@@ -9,16 +9,16 @@
 # Usage: scripts/publish-home.sh
 set -euo pipefail
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
-git clone -q --depth 1 https://github.com/mareikejens/idea-map-site.git "$work/site"
+git clone -q --depth 1 https://github.com/mareikejens/marbles.git "$work/site"
 git clone -q https://github.com/mareikejens/mareikejens.com.git "$work/home"
 sha=$(git -C "$work/site" rev-parse --short HEAD)
 # The site, without git history, the backend source, the scripts and the readme.
-rsync -a --exclude .git --exclude backend --exclude scripts --exclude README.md --exclude .nojekyll "$work/site/" "$work/home/"
+rsync -a --exclude .git --exclude backend --exclude scripts --exclude README.md --exclude .nojekyll --exclude docs --exclude .gitignore --exclude .env.example "$work/site/" "$work/home/"
 # The homepage is plain HTML. Without this file GitHub runs it through Jekyll, which leaves out folders such as vendor/.
 touch "$work/home/.nojekyll"
 cd "$work/home"
 git add -A
-if git diff --cached --quiet; then echo "Nothing new: mareikejens.com already has idea-map-site $sha."; exit 0; fi
-git commit -q -m "Publish the idea map (idea-map-site $sha)" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+if git diff --cached --quiet; then echo "Nothing new: mareikejens.com already has marbles $sha."; exit 0; fi
+git commit -q -m "Publish the idea map (marbles $sha)" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 git push -q origin HEAD:main
-echo "Pushed idea-map-site $sha to mareikejens.com. GitHub Pages needs about a minute."
+echo "Pushed marbles $sha to mareikejens.com. GitHub Pages needs about a minute."
